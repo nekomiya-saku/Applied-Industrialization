@@ -1,0 +1,15 @@
+pluginManagement {
+    repositories {
+        mavenLocal()
+        maven { name = 'AliyunPublic'; url = uri('https://maven.aliyun.com/repository/public/') }
+        maven { name = 'AliyunGoogle'; url = uri('https://maven.aliyun.com/repository/google/') }
+        maven { name = 'HuaweiCloud'; url = uri('https://repo.huaweicloud.com/repository/maven/') }
+        maven { name = 'TencentCloud'; url = uri('https://mirrors.cloud.tencent.com/nexus/repository/maven-public/') }
+        gradlePluginPortal()
+        // ModDev is not guaranteed to be mirrored, so retain the official
+        // NeoForge repository as the final plugin-resolution fallback.
+        maven { url = 'https://maven.neoforged.net/releases' }
+    }
+}
+
+rootProject.name = 'Applied-Industrialization'

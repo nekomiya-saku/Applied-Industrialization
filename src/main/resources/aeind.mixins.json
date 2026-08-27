@@ -1,0 +1,14 @@
+{
+    "required": true,
+    "minVersion": "0.8.5",
+    "package": "cn.autoforged.me_pattern_input_hatch_mod_1786194568.mixin",
+    "compatibilityLevel": "JAVA_21",
+    "mixins": [
+        "MachineComponentFluidsProviderMixin"
+    ],
+    "client": [],
+    "server": [],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}

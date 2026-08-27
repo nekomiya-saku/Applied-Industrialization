@@ -1,0 +1,10 @@
+.gradle/
+.idea/
+build/
+run/
+out/
+*.iml
+src/generated/
+
+# Local reference binaries; keep the project reproducible without committing game installs.
+libs/*.jar

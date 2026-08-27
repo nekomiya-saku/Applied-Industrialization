@@ -1,0 +1,119 @@
+plugins {
+    id 'java-library'
+    id 'eclipse'
+    id 'idea'
+    id 'net.neoforged.moddev' version '2.0.112'
+}
+
+version = project.mod_version
+group = project.mod_group
+base { archivesName = 'Applied-Industrialization' }
+
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+    withSourcesJar()
+}
+
+repositories {
+    mavenLocal()
+
+    def aliyunPublic = maven {
+        name = 'AliyunPublic'
+        url = uri('https://maven.aliyun.com/repository/public/')
+    }
+    maven {
+        name = 'AliyunGoogle'
+        url = uri('https://maven.aliyun.com/repository/google/')
+    }
+    def huaweiCloud = maven {
+        name = 'HuaweiCloud'
+        url = uri('https://repo.huaweicloud.com/repository/maven/')
+    }
+    def tencentCloud = maven {
+        name = 'TencentCloud'
+        url = uri('https://mirrors.cloud.tencent.com/nexus/repository/maven-public/')
+    }
+
+    // Keep LWJGL on domestic mirrors. ModDev also adds libraries.minecraft.net,
+    // which can fail TLS negotiation on some mainland networks.
+    exclusiveContent {
+        forRepositories(aliyunPublic, huaweiCloud, tencentCloud)
+        filter { includeGroup 'org.lwjgl' }
+    }
+
+    maven {
+        name = 'CurseMaven'
+        url = uri('https://www.cursemaven.com')
+        content { includeGroup 'curse.maven' }
+    }
+    maven {
+        name = 'SpongePowered'
+        url = uri('https://spongepowered.org/maven/')
+    }
+    maven {
+        name = 'MekanismModMaven'
+        url = uri('https://modmaven.dev/mekanism/Mekanism/')
+    }
+    maven {
+        name = 'ModMaven'
+        url = uri('https://modmaven.dev')
+        content { includeGroup 'appeng' }
+    }
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'Modrinth'
+                url = uri('https://api.modrinth.com/maven')
+            }
+        }
+        filter { includeGroup 'maven.modrinth' }
+    }
+    flatDir { dirs 'libs' }
+
+    // NeoForge artifacts are not guaranteed to exist on general-purpose mirrors.
+    // This remains after the domestic mirrors as a compatibility fallback.
+    maven { url = 'https://maven.neoforged.net/releases' }
+    mavenCentral()
+}
+
+sourceSets {
+    main { java.srcDir 'src/main/java'; resources.srcDir 'src/main/resources' }
+}
+
+neoForge {
+    version = project.neoforge_version
+    parchment {
+        minecraftVersion = '1.21'
+        mappingsVersion = '2024.07.28'
+    }
+    mods {
+        aeind { sourceSet sourceSets.main }
+    }
+    runs {
+        configureEach {
+            gameDirectory = project.file('run')
+            systemProperty 'forge.logging.console.level', 'debug'
+            loadedMods = [mods.aeind]
+        }
+        client { client() }
+        server { server() }
+        data {
+            data()
+            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').absolutePath, '--existing', file('src/main/resources/').absolutePath
+        }
+    }
+}
+
+dependencies {
+    compileOnly files('libs/appliedenergistics2-19.2.17.jar')
+    compileOnly files('libs/Modern-Industrialization-2.5.6.jar')
+    compileOnly files('libs/Jade-1.21.1-NeoForge-15.10.6.jar')
+}
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+
+processResources {
+    def props = [version: project.mod_version, mod_id: project.mod_id, mod_name: project.mod_name, neo_version: project.neoforge_version, neo_version_range: project.neoforge_version_range]
+    inputs.properties props
+    filesMatching('META-INF/neoforge.mods.toml') { expand props }
+}

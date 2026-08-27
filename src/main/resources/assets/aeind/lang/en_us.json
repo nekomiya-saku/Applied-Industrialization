@@ -1,0 +1,16 @@
+{
+  "itemGroup.aeind": "Applied Industrialization",
+  "block.aeind.me_pattern_input_hatch": "Pattern Input Hatch",
+  "block.aeind.me_output_hatch": "Pattern Output Hatch",
+  "container.aeind.me_pattern_input_hatch": "Pattern Input Hatch",
+  "gui.aeind.fluid_empty": "No fluid buffered",
+  "gui.aeind.button.blocking.on": "Blocking: On",
+  "gui.aeind.button.blocking.off": "Blocking: Off",
+  "gui.aeind.button.redstone.ignore": "Redstone: Ignore",
+  "gui.aeind.button.redstone.high": "Redstone: High",
+  "gui.aeind.button.redstone.low": "Redstone: Low",
+  "jade.aeind.online": "Device Online",
+  "jade.aeind.offline": "Device Offline",
+  "button.aeind.return_material.label": "↺",
+  "button.aeind.return_material.tooltip": "Return material: send buffered raw materials back to the AE network"
+}

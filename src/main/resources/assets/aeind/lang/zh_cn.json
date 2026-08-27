@@ -1,0 +1,16 @@
+{
+  "itemGroup.aeind": "Applied Industrialization",
+  "block.aeind.me_pattern_input_hatch": "ME样板输入仓",
+  "block.aeind.me_output_hatch": "ME输出仓",
+  "container.aeind.me_pattern_input_hatch": "ME样板输入仓",
+  "gui.aeind.fluid_empty": "未缓存流体",
+  "gui.aeind.button.blocking.on": "阻塞:开",
+  "gui.aeind.button.blocking.off": "阻塞:关",
+  "gui.aeind.button.redstone.ignore": "红石:忽略",
+  "gui.aeind.button.redstone.high": "红石:高信号",
+  "gui.aeind.button.redstone.low": "红石:低信号",
+  "jade.aeind.online": "设备在线",
+  "jade.aeind.offline": "设备离线",
+  "button.aeind.return_material.label": "↺",
+  "button.aeind.return_material.tooltip": "原料返回:将仓内缓存的原料退回 AE 网络"
+}
