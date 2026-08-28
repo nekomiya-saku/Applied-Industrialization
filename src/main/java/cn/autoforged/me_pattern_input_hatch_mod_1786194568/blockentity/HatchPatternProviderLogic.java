@@ -1,5 +1,24 @@
 /*
  * Decompiled with CFR 0.152.
+ *
+ * Could not load the following classes:
+ *  appeng.api.config.Actionable
+ *  appeng.api.config.LockCraftingMode
+ *  appeng.api.crafting.IPatternDetails
+ *  appeng.api.crafting.IPatternDetails$IInput
+ *  appeng.api.networking.IManagedGridNode
+ *  appeng.api.networking.crafting.ICraftingProvider
+ *  appeng.api.stacks.AEKey
+ *  appeng.api.stacks.GenericStack
+ *  appeng.api.stacks.KeyCounter
+ *  appeng.helpers.patternprovider.PatternProviderLogic
+ *  appeng.helpers.patternprovider.PatternProviderLogicHost
+ *  appeng.util.inv.AppEngInternalInventory
+ *  it.unimi.dsi.fastutil.objects.Object2LongMap$Entry
+ *  net.minecraft.core.HolderLookup$Provider
+ *  net.minecraft.nbt.CompoundTag
+ *  net.minecraft.nbt.ListTag
+ *  net.minecraft.nbt.Tag
  */
 package cn.autoforged.me_pattern_input_hatch_mod_1786194568.blockentity;
 
@@ -135,7 +154,7 @@ extends PatternProviderLogic {
         super.writeToNBT(tag, registries);
         ListTag list = new ListTag();
         for (GenericStack stack : this.bufferSendList) {
-            list.add((Object)GenericStack.writeTag((HolderLookup.Provider)registries, (GenericStack)stack));
+            list.add(GenericStack.writeTag(registries, stack));
         }
         tag.put(NBT_BUFFER_SEND_LIST, (Tag)list);
     }
@@ -153,4 +172,3 @@ extends PatternProviderLogic {
         }
     }
 }
-

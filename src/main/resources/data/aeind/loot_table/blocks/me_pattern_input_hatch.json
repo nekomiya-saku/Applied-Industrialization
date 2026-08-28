@@ -11,7 +11,13 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "aeind:me_pattern_input_hatch"
+          "name": "aeind:me_pattern_input_hatch",
+          "functions": [
+            {
+              "function": "minecraft:copy_name",
+              "source": "block_entity"
+            }
+          ]
         }
       ],
       "rolls": 1.0

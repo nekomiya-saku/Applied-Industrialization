@@ -2,10 +2,11 @@
 
 NeoForge 1.21.1 addon for Applied Energistics 2 and Modern Industrialization.
 
-Applied Industrialization provides ME-aware pattern input and output hatches for
-Modern Industrialization multiblocks.
+Applied Industrialization adds ME-aware pattern input and output hatches for
+Modern Industrialization multiblocks, including an optional ExtendedAE 36-slot
+pattern input hatch and optional Productive Bees integration.
 
-## Local build
+## Build
 
 The project uses Java 21 and the NeoForge ModDev Gradle plugin.
 
@@ -13,7 +14,8 @@ The project uses Java 21 and the NeoForge ModDev Gradle plugin.
 gradlew.bat build
 ```
 
-## Reconstruction status
+Required runtime dependencies are Applied Energistics 2 and Modern Industrialization.
+Jade, ExtendedAE, and Productive Bees are optional integrations.
 
-The initial source tree was reconstructed from a working binary release. Registry
-IDs and resources are kept compatible with existing worlds.
+The source tree and resources are reconstructed from the compatible 1.1.5 release;
+registry IDs remain compatible with existing worlds.

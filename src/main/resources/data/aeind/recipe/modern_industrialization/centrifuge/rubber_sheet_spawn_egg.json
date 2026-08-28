@@ -1,0 +1,26 @@
+{
+  "type": "modern_industrialization:centrifuge",
+  "eu": 8,
+  "duration": 1200,
+  "fluid_inputs": {
+    "fluid": "modern_industrialization:styrene_butadiene_rubber",
+    "amount": 7000
+  },
+  "item_outputs": {
+    "type": "productivebees:component",
+    "components": {
+      "minecraft:entity_data": {
+        "type": "productivebees:rubber_sheet",
+        "id": "productivebees:configurable_bee"
+      }
+    },
+    "item": "productivebees:spawn_egg_configurable_bee",
+    "amount": 1
+  },
+  "neoforge:conditions": [
+    {
+      "type": "aeind:productive_bee_exists",
+      "bee": "productivebees:rubber_sheet"
+    }
+  ]
+}

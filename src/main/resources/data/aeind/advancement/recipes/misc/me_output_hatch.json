@@ -1,11 +1,21 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_engineering_processor": {
+    "has_interface": {
       "conditions": {
         "items": [
           {
-            "items": "ae2:engineering_processor"
+            "items": "ae2:interface"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_electronic_circuit": {
+      "conditions": {
+        "items": [
+          {
+            "items": "modern_industrialization:electronic_circuit"
           }
         ]
       },
@@ -21,7 +31,8 @@
   "requirements": [
     [
       "has_the_recipe",
-      "has_engineering_processor"
+      "has_interface",
+      "has_electronic_circuit"
     ]
   ],
   "rewards": {

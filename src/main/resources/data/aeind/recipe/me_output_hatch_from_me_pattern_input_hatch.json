@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "aeind:me_pattern_input_hatch"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "aeind:me_output_hatch"
+  }
+}

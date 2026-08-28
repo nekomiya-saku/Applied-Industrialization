@@ -1,5 +1,17 @@
 /*
  * Decompiled with CFR 0.152.
+ *
+ * Could not load the following classes:
+ *  net.minecraft.data.DataGenerator
+ *  net.minecraft.data.DataProvider
+ *  net.minecraft.data.PackOutput
+ *  net.minecraft.data.loot.LootTableProvider
+ *  net.minecraft.data.loot.LootTableProvider$SubProviderEntry
+ *  net.minecraft.world.level.storage.loot.parameters.LootContextParamSets
+ *  net.neoforged.bus.api.SubscribeEvent
+ *  net.neoforged.fml.common.EventBusSubscriber
+ *  net.neoforged.neoforge.common.data.ExistingFileHelper
+ *  net.neoforged.neoforge.data.event.GatherDataEvent
  */
 package cn.autoforged.me_pattern_input_hatch_mod_1786194568.datagen;
 

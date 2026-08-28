@@ -1,6 +1,10 @@
 {
   "values": [
     "aeind:me_pattern_input_hatch",
-    "aeind:me_output_hatch"
+    "aeind:me_output_hatch",
+    {
+      "id": "aeind:extended_pattern_input_hatch",
+      "required": false
+    }
   ]
 }

@@ -1,5 +1,16 @@
 /*
  * Decompiled with CFR 0.152.
+ *
+ * Could not load the following classes:
+ *  net.minecraft.core.Holder
+ *  net.minecraft.world.level.block.Block
+ *  net.minecraft.world.level.block.SoundType
+ *  net.minecraft.world.level.block.state.BlockBehaviour$Properties
+ *  net.minecraft.world.level.material.MapColor
+ *  net.neoforged.bus.api.IEventBus
+ *  net.neoforged.neoforge.registries.DeferredBlock
+ *  net.neoforged.neoforge.registries.DeferredRegister
+ *  net.neoforged.neoforge.registries.DeferredRegister$Blocks
  */
 package cn.autoforged.me_pattern_input_hatch_mod_1786194568.block;
 
@@ -13,6 +24,7 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -20,6 +32,9 @@ public class ModBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks((String)"aeind");
     public static final DeferredBlock<MEPatternInputHatchBlock> ME_PATTERN_INPUT_HATCH = ModBlocks.registerBlock("me_pattern_input_hatch", () -> new MEPatternInputHatchBlock(BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.0f, 6.0f).sound(SoundType.METAL).requiresCorrectToolForDrops().lightLevel(state -> 0)));
     public static final DeferredBlock<MEOutputHatchBlock> ME_OUTPUT_HATCH = ModBlocks.registerBlock("me_output_hatch", () -> new MEOutputHatchBlock(BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.0f, 6.0f).sound(SoundType.METAL).requiresCorrectToolForDrops().lightLevel(state -> 0)));
+    public static final DeferredBlock<ExtendedPatternInputHatchBlock> EXTENDED_PATTERN_INPUT_HATCH = ModList.get().isLoaded("extendedae")
+            ? ModBlocks.registerBlock("extended_pattern_input_hatch", () -> new ExtendedPatternInputHatchBlock(BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.0f, 6.0f).sound(SoundType.METAL).requiresCorrectToolForDrops().lightLevel(state -> 0)))
+            : null;
 
     private static <T extends Block> DeferredBlock<T> registerBlock(String name, Supplier<? extends T> blockSupplier) {
         DeferredBlock deferredBlock = BLOCKS.register(name, blockSupplier);
@@ -31,4 +46,3 @@ public class ModBlocks {
         BLOCKS.register(eventBus);
     }
 }
-

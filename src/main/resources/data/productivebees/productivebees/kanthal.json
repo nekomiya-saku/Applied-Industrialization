@@ -1,0 +1,14 @@
+{
+  "primaryColor": "#cfcb00",
+  "secondaryColor": "#756e15",
+  "tertiaryColor": "#f2ec38",
+  "particleColor": "#cfcb00",
+  "flowerTag": "aeind:kanthal_bee_flowers",
+  "selfbreed": false,
+  "conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "productivebees"
+    }
+  ]
+}

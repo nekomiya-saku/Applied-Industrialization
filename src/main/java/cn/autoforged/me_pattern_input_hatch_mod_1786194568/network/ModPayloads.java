@@ -1,9 +1,21 @@
 /*
  * Decompiled with CFR 0.152.
+ *
+ * Could not load the following classes:
+ *  net.minecraft.server.level.ServerPlayer
+ *  net.minecraft.world.entity.player.Player
+ *  net.minecraft.world.inventory.AbstractContainerMenu
+ *  net.neoforged.bus.api.SubscribeEvent
+ *  net.neoforged.fml.common.EventBusSubscriber
+ *  net.neoforged.fml.common.EventBusSubscriber$Bus
+ *  net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent
+ *  net.neoforged.neoforge.network.handling.IPayloadContext
+ *  net.neoforged.neoforge.network.registration.PayloadRegistrar
  */
 package cn.autoforged.me_pattern_input_hatch_mod_1786194568.network;
 
 import cn.autoforged.me_pattern_input_hatch_mod_1786194568.gui.HatchPatternProviderMenu;
+import cn.autoforged.me_pattern_input_hatch_mod_1786194568.gui.ExtendedPatternProviderMenu;
 import cn.autoforged.me_pattern_input_hatch_mod_1786194568.network.ServerboundReturnMaterialPayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
@@ -28,7 +40,8 @@ public class ModPayloads {
         if (player instanceof ServerPlayer && (abstractContainerMenu = player.containerMenu) instanceof HatchPatternProviderMenu) {
             HatchPatternProviderMenu menu = (HatchPatternProviderMenu)abstractContainerMenu;
             menu.returnMaterial();
+        } else if (player instanceof ServerPlayer && player.containerMenu instanceof ExtendedPatternProviderMenu menu) {
+            menu.returnMaterial();
         }
     }
 }
-

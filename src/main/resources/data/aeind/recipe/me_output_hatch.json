@@ -1,18 +1,13 @@
 {
-  "type": "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shapeless",
   "category": "misc",
-  "key": {
-    "E": {
-      "item": "ae2:engineering_processor"
+  "ingredients": [
+    {
+      "item": "ae2:interface"
     },
-    "I": {
-      "item": "minecraft:iron_ingot"
+    {
+      "item": "modern_industrialization:electronic_circuit"
     }
-  },
-  "pattern": [
-    "III",
-    "IEI",
-    "III"
   ],
   "result": {
     "count": 1,

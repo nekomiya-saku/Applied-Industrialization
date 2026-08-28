@@ -1,0 +1,14 @@
+{
+  "primaryColor": "#1a1a1a",
+  "secondaryColor": "#423821",
+  "tertiaryColor": "#707070",
+  "particleColor": "#423821",
+  "flowerItem": "modern_industrialization:rubber_sheet",
+  "selfbreed": false,
+  "conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "productivebees"
+    }
+  ]
+}

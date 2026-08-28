@@ -1,5 +1,11 @@
 /*
  * Decompiled with CFR 0.152.
+ *
+ * Could not load the following classes:
+ *  net.minecraft.core.HolderLookup$Provider
+ *  net.minecraft.data.loot.BlockLootSubProvider
+ *  net.minecraft.world.flag.FeatureFlags
+ *  net.minecraft.world.level.block.Block
  */
 package cn.autoforged.me_pattern_input_hatch_mod_1786194568.datagen;
 

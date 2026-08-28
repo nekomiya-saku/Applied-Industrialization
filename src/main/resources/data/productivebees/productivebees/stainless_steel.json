@@ -1,0 +1,14 @@
+{
+  "primaryColor": "#c8c8dc",
+  "secondaryColor": "#83838f",
+  "tertiaryColor": "#e8e8f3",
+  "particleColor": "#c8c8dc",
+  "flowerBlock": "modern_industrialization:stainless_steel_block",
+  "selfbreed": false,
+  "conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "productivebees"
+    }
+  ]
+}

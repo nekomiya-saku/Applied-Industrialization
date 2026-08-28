@@ -1,0 +1,14 @@
+{
+  "primaryColor": "#ff924f",
+  "secondaryColor": "#a84620",
+  "tertiaryColor": "#ffc08d",
+  "particleColor": "#ff924f",
+  "flowerBlock": "modern_industrialization:annealed_copper_block",
+  "selfbreed": false,
+  "conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "productivebees"
+    }
+  ]
+}

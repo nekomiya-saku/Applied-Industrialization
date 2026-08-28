@@ -1,4 +1,5 @@
 {
+  "block.aeind.extended_pattern_input_hatch": "Extended ME Pattern Input Hatch",
   "itemGroup.aeind": "Applied Industrialization",
   "block.aeind.me_pattern_input_hatch": "Pattern Input Hatch",
   "block.aeind.me_output_hatch": "Pattern Output Hatch",
@@ -12,5 +13,9 @@
   "jade.aeind.online": "Device Online",
   "jade.aeind.offline": "Device Offline",
   "button.aeind.return_material.label": "↺",
-  "button.aeind.return_material.tooltip": "Return material: send buffered raw materials back to the AE network"
+  "button.aeind.return_material.tooltip": "Return material: send buffered raw materials back to the AE network",
+  "entity.productivebees.stainless_steel_bee": "Stainless Steel Bee",
+  "entity.productivebees.kanthal_bee": "Kanthal Bee",
+  "entity.productivebees.annealed_copper_bee": "Annealed Copper Bee",
+  "entity.productivebees.rubber_sheet_bee": "Rubber Sheet Bee"
 }

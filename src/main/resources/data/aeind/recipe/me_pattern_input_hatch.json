@@ -1,18 +1,13 @@
 {
-  "type": "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shapeless",
   "category": "misc",
-  "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
+  "ingredients": [
+    {
+      "item": "ae2:pattern_provider"
     },
-    "P": {
-      "item": "ae2:calculation_processor"
+    {
+      "item": "modern_industrialization:electronic_circuit"
     }
-  },
-  "pattern": [
-    "III",
-    "IPI",
-    "III"
   ],
   "result": {
     "count": 1,

@@ -1,5 +1,20 @@
 /*
  * Decompiled with CFR 0.152.
+ *
+ * Could not load the following classes:
+ *  appeng.api.config.Actionable
+ *  appeng.api.networking.security.IActionSource
+ *  appeng.api.stacks.AEFluidKey
+ *  appeng.api.stacks.AEItemKey
+ *  appeng.api.stacks.AEKey
+ *  appeng.api.stacks.KeyCounter
+ *  appeng.api.storage.MEStorage
+ *  net.minecraft.network.chat.Component
+ *  net.minecraft.world.item.ItemStack
+ *  net.neoforged.neoforge.fluids.FluidStack
+ *  net.neoforged.neoforge.fluids.capability.IFluidHandler
+ *  net.neoforged.neoforge.fluids.capability.IFluidHandler$FluidAction
+ *  net.neoforged.neoforge.items.IItemHandler
  */
 package cn.autoforged.me_pattern_input_hatch_mod_1786194568.blockentity;
 

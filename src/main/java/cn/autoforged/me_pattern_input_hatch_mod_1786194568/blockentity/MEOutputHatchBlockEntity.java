@@ -1,5 +1,51 @@
 /*
  * Decompiled with CFR 0.152.
+ *
+ * Could not load the following classes:
+ *  appeng.api.config.Actionable
+ *  appeng.api.networking.GridFlags
+ *  appeng.api.networking.GridHelper
+ *  appeng.api.networking.IGridNode
+ *  appeng.api.networking.IGridNodeListener
+ *  appeng.api.networking.IInWorldGridNodeHost
+ *  appeng.api.networking.IManagedGridNode
+ *  appeng.api.networking.security.IActionHost
+ *  appeng.api.networking.security.IActionSource
+ *  appeng.api.stacks.AEFluidKey
+ *  appeng.api.stacks.AEItemKey
+ *  appeng.api.stacks.AEKey
+ *  appeng.api.storage.MEStorage
+ *  appeng.api.util.AECableType
+ *  appeng.me.helpers.MachineSource
+ *  aztech.modern_industrialization.inventory.ConfigurableFluidStack
+ *  aztech.modern_industrialization.inventory.ConfigurableItemStack
+ *  aztech.modern_industrialization.inventory.MIInventory
+ *  aztech.modern_industrialization.inventory.SlotPositions
+ *  aztech.modern_industrialization.inventory.SlotPositions$Builder
+ *  aztech.modern_industrialization.machines.BEP
+ *  aztech.modern_industrialization.machines.MachineComponent
+ *  aztech.modern_industrialization.machines.components.OrientationComponent$Params
+ *  aztech.modern_industrialization.machines.gui.MachineGuiParameters$Builder
+ *  aztech.modern_industrialization.machines.models.MachineModelClientData
+ *  aztech.modern_industrialization.machines.multiblocks.HatchBlockEntity
+ *  aztech.modern_industrialization.machines.multiblocks.HatchType
+ *  aztech.modern_industrialization.machines.multiblocks.HatchTypes
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.core.Direction
+ *  net.minecraft.core.HolderLookup$Provider
+ *  net.minecraft.nbt.CompoundTag
+ *  net.minecraft.resources.ResourceLocation
+ *  net.minecraft.world.item.ItemStack
+ *  net.minecraft.world.level.ItemLike
+ *  net.minecraft.world.level.Level
+ *  net.minecraft.world.level.block.entity.BlockEntity
+ *  net.minecraft.world.level.block.entity.BlockEntityType
+ *  net.minecraft.world.level.block.state.BlockState
+ *  net.neoforged.neoforge.fluids.FluidStack
+ *  net.neoforged.neoforge.fluids.capability.IFluidHandler
+ *  net.neoforged.neoforge.fluids.capability.IFluidHandler$FluidAction
+ *  net.neoforged.neoforge.items.IItemHandler
+ *  org.jetbrains.annotations.Nullable
  */
 package cn.autoforged.me_pattern_input_hatch_mod_1786194568.blockentity;
 
@@ -59,7 +105,7 @@ IActionHost {
     public static final int BUFFER_FLUID_TANKS = 9;
     public static final long FLUID_CAPACITY = Integer.MAX_VALUE;
     public static final int TICK_RATE = 1;
-    private final IManagedGridNode mainNode = GridHelper.createManagedNode((Object)((Object)this), NODE_LISTENER).setVisualRepresentation(new ItemStack((ItemLike)ModBlocks.ME_OUTPUT_HATCH.get())).setInWorldNode(true).setTagName("me_output_hatch_node").setFlags(new GridFlags[]{GridFlags.REQUIRE_CHANNEL}).setExposedOnSides(EnumSet.allOf(Direction.class));
+    private final IManagedGridNode mainNode = GridHelper.createManagedNode(this, NODE_LISTENER).setVisualRepresentation(new ItemStack((ItemLike)ModBlocks.ME_OUTPUT_HATCH.get())).setInWorldNode(true).setTagName("me_output_hatch_node").setFlags(new GridFlags[]{GridFlags.REQUIRE_CHANNEL}).setExposedOnSides(EnumSet.allOf(Direction.class));
     private final MIInventory bufferInventory;
     private final MachineComponent persistentData = new MachineComponent(){
 
@@ -107,7 +153,7 @@ IActionHost {
 
     public void clearRemoved() {
         super.clearRemoved();
-        GridHelper.onFirstTick((BlockEntity)this, be -> {
+        GridHelper.onFirstTick(this, (MEOutputHatchBlockEntity be) -> {
             if (be.getLevel() == null || be.isRemoved()) {
                 return;
             }
@@ -238,4 +284,3 @@ IActionHost {
         }
     }
 }
-

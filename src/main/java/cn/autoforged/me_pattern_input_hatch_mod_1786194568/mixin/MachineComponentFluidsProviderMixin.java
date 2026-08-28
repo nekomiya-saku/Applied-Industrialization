@@ -1,5 +1,12 @@
 /*
  * Decompiled with CFR 0.152.
+ *
+ * Could not load the following classes:
+ *  aztech.modern_industrialization.api.machine.component.FluidAccess
+ *  aztech.modern_industrialization.compat.jade.server.MachineComponentProvider$Fluids
+ *  org.spongepowered.asm.mixin.Mixin
+ *  org.spongepowered.asm.mixin.injection.At
+ *  org.spongepowered.asm.mixin.injection.ModifyArg
  */
 package cn.autoforged.me_pattern_input_hatch_mod_1786194568.mixin;
 

@@ -1,5 +1,30 @@
 /*
  * Decompiled with CFR 0.152.
+ *
+ * Could not load the following classes:
+ *  appeng.menu.MenuOpener
+ *  appeng.menu.locator.MenuHostLocator
+ *  appeng.menu.locator.MenuLocators
+ *  com.mojang.serialization.MapCodec
+ *  net.minecraft.ChatFormatting
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.network.chat.Component
+ *  net.minecraft.server.level.ServerPlayer
+ *  net.minecraft.world.Containers
+ *  net.minecraft.world.InteractionResult
+ *  net.minecraft.world.entity.player.Player
+ *  net.minecraft.world.inventory.MenuType
+ *  net.minecraft.world.level.Level
+ *  net.minecraft.world.level.block.BaseEntityBlock
+ *  net.minecraft.world.level.block.RenderShape
+ *  net.minecraft.world.level.block.entity.BlockEntity
+ *  net.minecraft.world.level.block.entity.BlockEntityTicker
+ *  net.minecraft.world.level.block.entity.BlockEntityType
+ *  net.minecraft.world.level.block.state.BlockBehaviour$Properties
+ *  net.minecraft.world.level.block.state.BlockState
+ *  net.minecraft.world.level.material.FluidState
+ *  net.minecraft.world.phys.BlockHitResult
+ *  org.jetbrains.annotations.Nullable
  */
 package cn.autoforged.me_pattern_input_hatch_mod_1786194568.block;
 
@@ -12,12 +37,15 @@ import cn.autoforged.me_pattern_input_hatch_mod_1786194568.gui.ModMenuTypes;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
@@ -49,6 +77,15 @@ extends BaseEntityBlock {
 
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
+    }
+
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        Component customName = stack.get(DataComponents.CUSTOM_NAME);
+        if (customName != null && level.getBlockEntity(pos) instanceof MEPatternInputHatchBlockEntity blockEntity) {
+            blockEntity.setCustomName(customName);
+        }
     }
 
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
@@ -89,4 +126,3 @@ extends BaseEntityBlock {
         return MEPatternInputHatchBlock.createTickerHelper(type, (BlockEntityType)((BlockEntityType)ModBlockEntities.ME_PATTERN_INPUT_HATCH.get()), MEPatternInputHatchBlockEntity::serverTick);
     }
 }
-

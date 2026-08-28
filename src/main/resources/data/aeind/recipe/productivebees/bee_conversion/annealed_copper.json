@@ -1,0 +1,15 @@
+{
+  "type": "productivebees:bee_conversion",
+  "source": "productivebees:copper",
+  "result": "productivebees:annealed_copper",
+  "item": {
+    "item": "modern_industrialization:annealed_copper_ingot"
+  },
+  "chance": 0.6,
+  "neoforge:conditions": [
+    {
+      "type": "aeind:productive_bee_exists",
+      "bee": "productivebees:annealed_copper"
+    }
+  ]
+}

@@ -1,5 +1,14 @@
 /*
  * Decompiled with CFR 0.152.
+ *
+ * Could not load the following classes:
+ *  net.minecraft.core.HolderLookup$Provider
+ *  net.minecraft.data.PackOutput
+ *  net.minecraft.tags.BlockTags
+ *  net.minecraft.world.level.block.Block
+ *  net.neoforged.neoforge.common.data.BlockTagsProvider
+ *  net.neoforged.neoforge.common.data.ExistingFileHelper
+ *  org.jetbrains.annotations.Nullable
  */
 package cn.autoforged.me_pattern_input_hatch_mod_1786194568.datagen;
 
@@ -20,7 +29,8 @@ extends BlockTagsProvider {
     }
 
     protected void addTags(HolderLookup.Provider provider) {
-        this.tag(BlockTags.MINEABLE_WITH_PICKAXE).add((Object)((Block)ModBlocks.ME_PATTERN_INPUT_HATCH.get())).add((Object)((Block)ModBlocks.ME_OUTPUT_HATCH.get()));
+        this.tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                .add(ModBlocks.ME_PATTERN_INPUT_HATCH.get())
+                .add(ModBlocks.ME_OUTPUT_HATCH.get());
     }
 }
-

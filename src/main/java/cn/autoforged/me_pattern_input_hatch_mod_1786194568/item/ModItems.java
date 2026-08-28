@@ -1,5 +1,10 @@
 /*
  * Decompiled with CFR 0.152.
+ *
+ * Could not load the following classes:
+ *  net.neoforged.bus.api.IEventBus
+ *  net.neoforged.neoforge.registries.DeferredRegister
+ *  net.neoforged.neoforge.registries.DeferredRegister$Items
  */
 package cn.autoforged.me_pattern_input_hatch_mod_1786194568.item;
 

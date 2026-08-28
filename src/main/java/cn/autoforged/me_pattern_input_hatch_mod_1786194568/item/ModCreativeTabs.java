@@ -20,6 +20,9 @@ public class ModCreativeTabs {
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> ME_PATTERN_INPUT_HATCH_TAB = CREATIVE_TABS.register("me_pattern_input_hatch_tab", () -> CreativeModeTab.builder().title((Component)Component.translatable((String)"itemGroup.aeind")).icon(() -> new ItemStack((ItemLike)ModBlocks.ME_PATTERN_INPUT_HATCH.get())).withTabsBefore(new ResourceKey[]{CreativeModeTabs.FUNCTIONAL_BLOCKS}).displayItems((params, output) -> {
         output.accept((ItemLike)ModBlocks.ME_PATTERN_INPUT_HATCH.get());
         output.accept((ItemLike)ModBlocks.ME_OUTPUT_HATCH.get());
+        if (ModBlocks.EXTENDED_PATTERN_INPUT_HATCH != null) {
+            output.accept((ItemLike)ModBlocks.EXTENDED_PATTERN_INPUT_HATCH.get());
+        }
     }).build());
 
     public static void register(IEventBus eventBus) {

@@ -1,0 +1,30 @@
+{
+  "type": "productivebees:centrifuge",
+  "ingredient": {
+    "type": "productivebees:component",
+    "components": {
+      "productivebees:bee_type": "productivebees:stainless_steel"
+    },
+    "items": "productivebees:configurable_honeycomb"
+  },
+  "outputs": [
+    {
+      "item": {
+        "item": "modern_industrialization:stainless_steel_nugget"
+      },
+      "min": 1,
+      "max": 3,
+      "chance": 0.4
+    }
+  ],
+  "fluid": {
+    "amount": 100,
+    "fluid": "productivebees:honey"
+  },
+  "neoforge:conditions": [
+    {
+      "type": "aeind:productive_bee_exists",
+      "bee": "productivebees:stainless_steel"
+    }
+  ]
+}

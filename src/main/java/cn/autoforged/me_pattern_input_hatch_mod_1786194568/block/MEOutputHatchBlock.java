@@ -1,5 +1,21 @@
 /*
  * Decompiled with CFR 0.152.
+ *
+ * Could not load the following classes:
+ *  com.mojang.serialization.MapCodec
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.core.NonNullList
+ *  net.minecraft.world.Containers
+ *  net.minecraft.world.item.ItemStack
+ *  net.minecraft.world.level.Level
+ *  net.minecraft.world.level.block.BaseEntityBlock
+ *  net.minecraft.world.level.block.RenderShape
+ *  net.minecraft.world.level.block.entity.BlockEntity
+ *  net.minecraft.world.level.block.entity.BlockEntityTicker
+ *  net.minecraft.world.level.block.entity.BlockEntityType
+ *  net.minecraft.world.level.block.state.BlockBehaviour$Properties
+ *  net.minecraft.world.level.block.state.BlockState
+ *  org.jetbrains.annotations.Nullable
  */
 package cn.autoforged.me_pattern_input_hatch_mod_1786194568.block;
 

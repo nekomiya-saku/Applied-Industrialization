@@ -1,4 +1,5 @@
 {
+  "block.aeind.extended_pattern_input_hatch": "扩展样板输入仓",
   "itemGroup.aeind": "Applied Industrialization",
   "block.aeind.me_pattern_input_hatch": "ME样板输入仓",
   "block.aeind.me_output_hatch": "ME输出仓",
@@ -12,5 +13,9 @@
   "jade.aeind.online": "设备在线",
   "jade.aeind.offline": "设备离线",
   "button.aeind.return_material.label": "↺",
-  "button.aeind.return_material.tooltip": "原料返回:将仓内缓存的原料退回 AE 网络"
+  "button.aeind.return_material.tooltip": "原料返回:将仓内缓存的原料退回 AE 网络",
+  "entity.productivebees.stainless_steel_bee": "不锈钢蜜蜂",
+  "entity.productivebees.kanthal_bee": "坎塔尔蜜蜂",
+  "entity.productivebees.annealed_copper_bee": "退火铜蜜蜂",
+  "entity.productivebees.rubber_sheet_bee": "橡胶片蜜蜂"
 }

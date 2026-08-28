@@ -1,5 +1,10 @@
 /*
  * Decompiled with CFR 0.152.
+ *
+ * Could not load the following classes:
+ *  net.minecraft.data.PackOutput
+ *  net.neoforged.neoforge.client.model.generators.ItemModelProvider
+ *  net.neoforged.neoforge.common.data.ExistingFileHelper
  */
 package cn.autoforged.me_pattern_input_hatch_mod_1786194568.datagen;
 

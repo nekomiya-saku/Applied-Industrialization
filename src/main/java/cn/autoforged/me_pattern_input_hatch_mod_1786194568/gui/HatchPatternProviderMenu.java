@@ -1,5 +1,11 @@
 /*
  * Decompiled with CFR 0.152.
+ *
+ * Could not load the following classes:
+ *  appeng.helpers.patternprovider.PatternProviderLogicHost
+ *  appeng.menu.implementations.PatternProviderMenu
+ *  net.minecraft.world.entity.player.Inventory
+ *  net.minecraft.world.inventory.MenuType
  */
 package cn.autoforged.me_pattern_input_hatch_mod_1786194568.gui;
 

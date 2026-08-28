@@ -1,5 +1,64 @@
 /*
  * Decompiled with CFR 0.152.
+ *
+ * Could not load the following classes:
+ *  appeng.api.config.Actionable
+ *  appeng.api.config.Settings
+ *  appeng.api.config.YesNo
+ *  appeng.api.networking.GridFlags
+ *  appeng.api.networking.GridHelper
+ *  appeng.api.networking.IGridNode
+ *  appeng.api.networking.IGridNodeListener
+ *  appeng.api.networking.IGridNodeListener$State
+ *  appeng.api.networking.IInWorldGridNodeHost
+ *  appeng.api.networking.IManagedGridNode
+ *  appeng.api.networking.security.IActionHost
+ *  appeng.api.networking.security.IActionSource
+ *  appeng.api.stacks.AEFluidKey
+ *  appeng.api.stacks.AEItemKey
+ *  appeng.api.stacks.AEKey
+ *  appeng.api.storage.MEStorage
+ *  appeng.api.upgrades.IUpgradeInventory
+ *  appeng.api.upgrades.UpgradeInventories
+ *  appeng.api.util.AECableType
+ *  appeng.core.definitions.AEItems
+ *  appeng.helpers.patternprovider.PatternProviderLogicHost
+ *  appeng.me.helpers.MachineSource
+ *  aztech.modern_industrialization.inventory.ConfigurableFluidStack
+ *  aztech.modern_industrialization.inventory.ConfigurableItemStack
+ *  aztech.modern_industrialization.inventory.MIInventory
+ *  aztech.modern_industrialization.inventory.SlotPositions
+ *  aztech.modern_industrialization.inventory.SlotPositions$Builder
+ *  aztech.modern_industrialization.machines.BEP
+ *  aztech.modern_industrialization.machines.MachineComponent
+ *  aztech.modern_industrialization.machines.components.OrientationComponent$Params
+ *  aztech.modern_industrialization.machines.gui.MachineGuiParameters$Builder
+ *  aztech.modern_industrialization.machines.models.MachineModelClientData
+ *  aztech.modern_industrialization.machines.multiblocks.HatchBlockEntity
+ *  aztech.modern_industrialization.machines.multiblocks.HatchType
+ *  aztech.modern_industrialization.machines.multiblocks.HatchTypes
+ *  aztech.modern_industrialization.thirdparty.fabrictransfer.api.fluid.FluidVariant
+ *  aztech.modern_industrialization.thirdparty.fabrictransfer.api.item.ItemVariant
+ *  aztech.modern_industrialization.thirdparty.fabrictransfer.api.storage.TransferVariant
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.core.Direction
+ *  net.minecraft.core.HolderLookup$Provider
+ *  net.minecraft.core.NonNullList
+ *  net.minecraft.nbt.CompoundTag
+ *  net.minecraft.resources.ResourceLocation
+ *  net.minecraft.world.inventory.ContainerData
+ *  net.minecraft.world.item.ItemStack
+ *  net.minecraft.world.level.ItemLike
+ *  net.minecraft.world.level.Level
+ *  net.minecraft.world.level.block.entity.BlockEntity
+ *  net.minecraft.world.level.block.entity.BlockEntityType
+ *  net.minecraft.world.level.block.state.BlockState
+ *  net.minecraft.world.level.material.Fluid
+ *  net.neoforged.neoforge.fluids.FluidStack
+ *  net.neoforged.neoforge.fluids.capability.IFluidHandler
+ *  net.neoforged.neoforge.fluids.capability.IFluidHandler$FluidAction
+ *  net.neoforged.neoforge.items.IItemHandler
+ *  org.jetbrains.annotations.Nullable
  */
 package cn.autoforged.me_pattern_input_hatch_mod_1786194568.blockentity;
 
@@ -38,7 +97,6 @@ import aztech.modern_industrialization.machines.multiblocks.HatchType;
 import aztech.modern_industrialization.machines.multiblocks.HatchTypes;
 import aztech.modern_industrialization.thirdparty.fabrictransfer.api.fluid.FluidVariant;
 import aztech.modern_industrialization.thirdparty.fabrictransfer.api.item.ItemVariant;
-import aztech.modern_industrialization.thirdparty.fabrictransfer.api.storage.TransferVariant;
 import cn.autoforged.me_pattern_input_hatch_mod_1786194568.block.ModBlocks;
 import cn.autoforged.me_pattern_input_hatch_mod_1786194568.blockentity.HatchPatternProviderLogic;
 import cn.autoforged.me_pattern_input_hatch_mod_1786194568.blockentity.ModBlockEntities;
@@ -52,7 +110,9 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.Nameable;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
@@ -70,7 +130,8 @@ public class MEPatternInputHatchBlockEntity
 extends HatchBlockEntity
 implements IInWorldGridNodeHost,
 IActionHost,
-PatternProviderLogicHost {
+PatternProviderLogicHost,
+Nameable {
     public static final int PATTERN_SLOTS = 9;
     public static final int BUFFER_SLOTS = 9;
     public static final int BUFFER_FLUID_TANKS = 9;
@@ -81,10 +142,12 @@ PatternProviderLogicHost {
     public static final int REDSTONE_MODE_HIGH = 1;
     public static final int REDSTONE_MODE_LOW = 2;
     private final HatchPatternProviderLogic patternLogic;
-    private final IManagedGridNode mainNode = GridHelper.createManagedNode((Object)((Object)this), NODE_LISTENER).setVisualRepresentation(new ItemStack((ItemLike)ModBlocks.ME_PATTERN_INPUT_HATCH.get())).setInWorldNode(true).setTagName("me_pattern_input_hatch_node").setFlags(new GridFlags[]{GridFlags.REQUIRE_CHANNEL}).setExposedOnSides(EnumSet.allOf(Direction.class));
+    private final IManagedGridNode mainNode = GridHelper.createManagedNode(this, NODE_LISTENER).setVisualRepresentation(new ItemStack((ItemLike)ModBlocks.ME_PATTERN_INPUT_HATCH.get())).setInWorldNode(true).setTagName("me_pattern_input_hatch_node").setFlags(new GridFlags[]{GridFlags.REQUIRE_CHANNEL}).setExposedOnSides(EnumSet.allOf(Direction.class));
     private final IUpgradeInventory upgrades = UpgradeInventories.forMachine((ItemLike)((ItemLike)ModBlocks.ME_PATTERN_INPUT_HATCH.get()), (int)2, this::onUpgradesChanged);
     private int blockingMode = 0;
     private int redstoneMode = 0;
+    @Nullable
+    private Component customName;
     private final MIInventory bufferInventory;
     private final MachineComponent persistentData = new MachineComponent(){
 
@@ -94,6 +157,9 @@ PatternProviderLogicHost {
             MEPatternInputHatchBlockEntity.this.upgrades.writeToNBT(tag, "upgrades", registries);
             tag.putInt("blockingMode", MEPatternInputHatchBlockEntity.this.blockingMode);
             tag.putInt("redstoneMode", MEPatternInputHatchBlockEntity.this.redstoneMode);
+            if (MEPatternInputHatchBlockEntity.this.customName != null) {
+                tag.putString("customName", MEPatternInputHatchBlockEntity.this.customName.getString());
+            }
         }
 
         public void readNbt(CompoundTag tag, HolderLookup.Provider registries, boolean isUpgradingMachine) {
@@ -106,12 +172,18 @@ PatternProviderLogicHost {
             if (tag.contains("redstoneMode")) {
                 MEPatternInputHatchBlockEntity.this.redstoneMode = tag.getInt("redstoneMode");
             }
+            MEPatternInputHatchBlockEntity.this.customName = tag.contains("customName")
+                    ? Component.literal(tag.getString("customName"))
+                    : null;
         }
 
         public void writeClientNbt(CompoundTag tag, HolderLookup.Provider registries) {
             MEPatternInputHatchBlockEntity.this.upgrades.writeToNBT(tag, "upgrades", registries);
             tag.putInt("blockingMode", MEPatternInputHatchBlockEntity.this.blockingMode);
             tag.putInt("redstoneMode", MEPatternInputHatchBlockEntity.this.redstoneMode);
+            if (MEPatternInputHatchBlockEntity.this.customName != null) {
+                tag.putString("customName", MEPatternInputHatchBlockEntity.this.customName.getString());
+            }
         }
 
         public void readClientNbt(CompoundTag tag, HolderLookup.Provider registries) {
@@ -122,6 +194,9 @@ PatternProviderLogicHost {
             if (tag.contains("redstoneMode")) {
                 MEPatternInputHatchBlockEntity.this.redstoneMode = tag.getInt("redstoneMode");
             }
+            MEPatternInputHatchBlockEntity.this.customName = tag.contains("customName")
+                    ? Component.literal(tag.getString("customName"))
+                    : null;
         }
     };
     private final ContainerData dataAccess = new ContainerData(){
@@ -194,7 +269,7 @@ PatternProviderLogicHost {
 
     public void clearRemoved() {
         super.clearRemoved();
-        GridHelper.onFirstTick((BlockEntity)this, be -> {
+        GridHelper.onFirstTick(this, (MEPatternInputHatchBlockEntity be) -> {
             if (be.getLevel() == null || be.isRemoved()) {
                 return;
             }
@@ -208,6 +283,25 @@ PatternProviderLogicHost {
         if (this.level != null && !this.level.isClientSide) {
             this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
         }
+    }
+
+    @Override
+    public Component getName() {
+        return this.customName != null
+                ? this.customName
+                : Component.translatable("block.aeind.me_pattern_input_hatch");
+    }
+
+    @Override
+    @Nullable
+    public Component getCustomName() {
+        return this.customName;
+    }
+
+    public void setCustomName(@Nullable Component name) {
+        this.customName = name;
+        this.markDirtyAndSync();
+        this.refreshPatterns();
     }
 
     public IManagedGridNode getMainNode() {
@@ -415,7 +509,7 @@ PatternProviderLogicHost {
         if (capped <= 0L) {
             return 0L;
         }
-        List stacks = this.bufferInventory.getFluidStacks();
+        List<ConfigurableFluidStack> stacks = this.bufferInventory.getFluidStacks();
         for (ConfigurableFluidStack stack : stacks) {
             if (stack.isEmpty() || ((FluidVariant)stack.getResource()).getFluid() != fluidKey.getFluid()) continue;
             long space = stack.getCapacity() - stack.getAmount();
@@ -432,7 +526,7 @@ PatternProviderLogicHost {
             if (!stack.isEmpty()) continue;
             long toAdd = Math.min(capped, stack.getCapacity());
             if (!simulate) {
-                stack.setKey((TransferVariant)FluidVariant.of((Fluid)fluidKey.getFluid()));
+                stack.setKey(FluidVariant.of((Fluid)fluidKey.getFluid()));
                 stack.increment(toAdd);
             }
             return toAdd;
@@ -450,7 +544,7 @@ PatternProviderLogicHost {
         for (ConfigurableItemStack stack : this.bufferInventory.getItemStacks()) {
             long toAdd;
             if (placed >= amount) break;
-            if (!stack.isEmpty() ? !((ItemVariant)stack.getResource()).equals((Object)variant) : !stack.isResourceAllowedByLock((Object)key.getItem())) continue;
+            if (!stack.isEmpty() ? !((ItemVariant)stack.getResource()).equals(variant) : !stack.isResourceAllowedByLock(key.getItem())) continue;
             long space = Integer.MAX_VALUE - stack.getAmount();
             if (space <= 0L || (toAdd = Math.min(amount - placed, space)) <= 0L) continue;
             if (!simulate) {
@@ -500,7 +594,6 @@ PatternProviderLogicHost {
 
     private boolean returnBufferToNetwork(Predicate<AEKey> filter) {
         long pushed;
-        AEItemKey key;
         if (this.level == null || this.level.isClientSide) {
             return false;
         }
@@ -512,12 +605,16 @@ PatternProviderLogicHost {
         MachineSource source = new MachineSource((IActionHost)this);
         boolean changed = false;
         for (ConfigurableItemStack stack : this.bufferInventory.getItemStacks()) {
-            if (stack.isEmpty() || !filter.test((AEKey)(key = AEItemKey.of((ItemStack)stack.toStack()))) || (pushed = storage.insert((AEKey)key, stack.getAmount(), Actionable.MODULATE, (IActionSource)source)) <= 0L) continue;
+            if (stack.isEmpty()) continue;
+            AEItemKey key = AEItemKey.of(stack.toStack());
+            if (!filter.test(key) || (pushed = storage.insert(key, stack.getAmount(), Actionable.MODULATE, (IActionSource)source)) <= 0L) continue;
             stack.decrement(pushed);
             changed = true;
         }
-        for (ConfigurableItemStack stack : this.bufferInventory.getFluidStacks()) {
-            if (stack.isEmpty() || !filter.test((AEKey)(key = AEFluidKey.of((Fluid)((FluidVariant)stack.getResource()).getFluid()))) || (pushed = storage.insert((AEKey)key, stack.getAmount(), Actionable.MODULATE, (IActionSource)source)) <= 0L) continue;
+        for (ConfigurableFluidStack stack : this.bufferInventory.getFluidStacks()) {
+            if (stack.isEmpty()) continue;
+            AEFluidKey key = AEFluidKey.of(((FluidVariant)stack.getResource()).getFluid());
+            if (!filter.test(key) || (pushed = storage.insert(key, stack.getAmount(), Actionable.MODULATE, (IActionSource)source)) <= 0L) continue;
             stack.decrement(pushed);
             changed = true;
         }
@@ -590,4 +687,3 @@ PatternProviderLogicHost {
         return this.dataAccess;
     }
 }
-

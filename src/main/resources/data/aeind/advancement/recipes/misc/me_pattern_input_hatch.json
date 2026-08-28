@@ -1,11 +1,21 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_calculation_processor": {
+    "has_pattern_provider": {
       "conditions": {
         "items": [
           {
-            "items": "ae2:calculation_processor"
+            "items": "ae2:pattern_provider"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_electronic_circuit": {
+      "conditions": {
+        "items": [
+          {
+            "items": "modern_industrialization:electronic_circuit"
           }
         ]
       },
@@ -21,7 +31,8 @@
   "requirements": [
     [
       "has_the_recipe",
-      "has_calculation_processor"
+      "has_pattern_provider",
+      "has_electronic_circuit"
     ]
   ],
   "rewards": {
