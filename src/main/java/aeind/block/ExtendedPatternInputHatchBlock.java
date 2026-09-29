@@ -5,21 +5,17 @@ import appeng.menu.locator.MenuLocators;
 import aeind.blockentity.ExtendedPatternInputHatchBlockEntity;
 import aeind.blockentity.ModBlockEntities;
 import aeind.gui.ModMenuTypes;
-import aztech.modern_industrialization.MICommonProxy;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
@@ -53,13 +49,6 @@ public class ExtendedPatternInputHatchBlock extends BaseEntityBlock {
    @Override
    protected RenderShape getRenderShape(BlockState var1) {
       return RenderShape.MODEL;
-   }
-
-   @Override
-   public BlockState getAppearance(
-      BlockState state, BlockAndTintGetter renderView, BlockPos pos, Direction side, @Nullable BlockState sourceState, @Nullable BlockPos sourcePos
-   ) {
-      return renderView instanceof ServerLevel ? state : MICommonProxy.INSTANCE.getMachineCasingBlockState(state, renderView, pos);
    }
 
    @Override
