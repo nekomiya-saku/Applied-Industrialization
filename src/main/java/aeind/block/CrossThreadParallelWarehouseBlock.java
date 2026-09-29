@@ -23,6 +23,7 @@ public class CrossThreadParallelWarehouseBlock extends ThreadWarehouseBlock {
 
    @Override
    public void appendHoverText(ItemStack var1, Item.TooltipContext var2, List<Component> var3, TooltipFlag var4) {
+      super.appendHoverText(var1, var2, var3, var4);
       var3.add(Component.translatable("tooltip.aeind.cross_thread_parallel_warehouse").withStyle(ChatFormatting.AQUA));
    }
 

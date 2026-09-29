@@ -6,6 +6,7 @@ import aeind.blockentity.ExtendedPatternInputHatchBlockEntity;
 import aeind.blockentity.ModBlockEntities;
 import aeind.gui.ModMenuTypes;
 import com.mojang.serialization.MapCodec;
+import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -15,7 +16,9 @@ import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
@@ -49,6 +52,13 @@ public class ExtendedPatternInputHatchBlock extends BaseEntityBlock {
    @Override
    protected RenderShape getRenderShape(BlockState var1) {
       return RenderShape.MODEL;
+   }
+
+   @Override
+   public void appendHoverText(ItemStack var1, Item.TooltipContext var2, List<Component> var3, TooltipFlag var4) {
+      var3.add(Component.translatable("tooltip.aeind.pattern_input_hatch.isolation").withStyle(ChatFormatting.AQUA));
+      var3.add(Component.translatable("tooltip.aeind.pattern_input_hatch.no_catalyst").withStyle(ChatFormatting.YELLOW));
+      var3.add(Component.translatable("tooltip.aeind.pattern_input_hatch.catalyst_warning").withStyle(ChatFormatting.YELLOW));
    }
 
    @Override
