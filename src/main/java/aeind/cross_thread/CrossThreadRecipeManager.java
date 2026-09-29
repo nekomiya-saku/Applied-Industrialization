@@ -203,10 +203,10 @@ public final class CrossThreadRecipeManager {
          }
       }
 
-      List<ConfigurableItemStack> var14 = var3.hasMapStorage()
+      List<ConfigurableItemStack> recipeItems = var3.hasMapStorage()
          ? var3.inputStorage().createMiView().itemInputs()
          : var3.itemInputs();
-      Collection<RecipeHolder<MachineRecipe>> var15 = CrafterComponent.getRecipes(var7.getCrafterWorld(), var7.recipeType(), var14);
+      Collection<RecipeHolder<MachineRecipe>> var15 = CrafterComponent.getRecipes(var7.getCrafterWorld(), var7.recipeType(), recipeItems);
       ArrayList<RecipeHolder<MachineRecipe>> var16 = new ArrayList<>(var15);
       var16.sort(Comparator.comparing(var0 -> var0.id().toString()));
 
