@@ -37,6 +37,7 @@ import aztech.modern_industrialization.thirdparty.fabrictransfer.api.fluid.Fluid
 import aztech.modern_industrialization.thirdparty.fabrictransfer.api.item.ItemVariant;
 import aeind.block.ModBlocks;
 import aeind.isolation.IsolatedInputProvider;
+import aeind.isolation.RoomInputStorage;
 import aeind.isolation.ThreadIsolationRoom;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -48,6 +49,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.Nameable;
@@ -79,6 +81,7 @@ public class ExtendedPatternInputHatchBlockEntity
    public static final int REDSTONE_MODE_IGNORE = 0;
    public static final int REDSTONE_MODE_HIGH = 1;
    public static final int REDSTONE_MODE_LOW = 2;
+   private static final int INPUT_STORAGE_VERSION = 1;
    private final ExtendedHatchPatternProviderLogic patternLogic;
    private final IManagedGridNode mainNode;
    private final IUpgradeInventory upgrades;
@@ -87,6 +90,7 @@ public class ExtendedPatternInputHatchBlockEntity
    @Nullable
    private Component customName;
    private final MIInventory bufferInventory;
+   private final RoomInputStorage[] roomStorages;
    private final MachineComponent persistentData;
    private final ContainerData dataAccess;
    private int tickCount;
@@ -121,6 +125,7 @@ public class ExtendedPatternInputHatchBlockEntity
             ExtendedPatternInputHatchBlockEntity.this.mainNode.saveToNBT(var1);
             ExtendedPatternInputHatchBlockEntity.this.patternLogic.writeToNBT(var1, var2x);
             ExtendedPatternInputHatchBlockEntity.this.upgrades.writeToNBT(var1, "upgrades", var2x);
+            ExtendedPatternInputHatchBlockEntity.this.writeRoomStorageNbt(var1, var2x);
             var1.putInt("blockingMode", ExtendedPatternInputHatchBlockEntity.this.blockingMode);
             var1.putInt("redstoneMode", ExtendedPatternInputHatchBlockEntity.this.redstoneMode);
             if (ExtendedPatternInputHatchBlockEntity.this.customName != null) {
@@ -133,6 +138,7 @@ public class ExtendedPatternInputHatchBlockEntity
             ExtendedPatternInputHatchBlockEntity.this.mainNode.loadFromNBT(var1);
             ExtendedPatternInputHatchBlockEntity.this.patternLogic.readFromNBT(var1, var2x);
             ExtendedPatternInputHatchBlockEntity.this.upgrades.readFromNBT(var1, "upgrades", var2x);
+            ExtendedPatternInputHatchBlockEntity.this.readRoomStorageNbt(var1, var2x);
             if (var1.contains("blockingMode")) {
                ExtendedPatternInputHatchBlockEntity.this.blockingMode = var1.getInt("blockingMode");
             }
@@ -206,6 +212,10 @@ public class ExtendedPatternInputHatchBlockEntity
       SlotPositions var8 = new aztech.modern_industrialization.inventory.SlotPositions.Builder().addSlots(0, 0, 324, 1).build();
       SlotPositions var6 = new aztech.modern_industrialization.inventory.SlotPositions.Builder().addSlots(0, 0, 324, 1).build();
       this.bufferInventory = new MIInventory(var3, var7, var8, var6);
+      this.roomStorages = new RoomInputStorage[PATTERN_SLOTS];
+      for (int room = 0; room < this.roomStorages.length; room++) {
+         this.roomStorages[room] = new RoomInputStorage(this::setChanged);
+      }
       this.registerComponents(this.bufferInventory, this.persistentData);
    }
 
@@ -399,39 +409,12 @@ public class ExtendedPatternInputHatchBlockEntity
    }
 
    public boolean roomHasContent(int var1) {
-      if (var1 >= 0 && var1 < 36) {
-         int var2 = var1 * 9;
-         int var3 = var2 + 9;
-
-         for (ConfigurableItemStack var5 : this.bufferInventory.getItemStacks().subList(var2, var3)) {
-            if (!var5.isEmpty()) {
-               return true;
-            }
-         }
-
-         for (ConfigurableFluidStack var7 : this.bufferInventory.getFluidStacks().subList(var2, var3)) {
-            if (!var7.isEmpty()) {
-               return true;
-            }
-         }
-
-         return false;
-      } else {
-         return false;
-      }
+      return var1 >= 0 && var1 < this.roomStorages.length && !this.roomStorages[var1].isEmpty();
    }
 
    public long insertBuffer(int var1, AEKey var2, long var3, Actionable var5) {
       if (var1 >= 0 && var1 < 36 && var3 > 0L) {
-         int var6 = var1 * 9;
-         int var7 = var6 + 9;
-         if (var2 instanceof AEItemKey var9) {
-            return insertItems(this.bufferInventory.getItemStacks().subList(var6, var7), var9, var3, var5);
-         } else {
-            return var2 instanceof AEFluidKey var8
-               ? insertFluid(this.bufferInventory.getFluidStacks().subList(var6, var7), var8, var3, var5 != Actionable.MODULATE)
-               : 0L;
-         }
+         return var2 instanceof AEItemKey || var2 instanceof AEFluidKey ? this.roomStorages[var1].insert(var2, var3, var5) : 0L;
       } else {
          return 0L;
       }
@@ -642,23 +625,7 @@ public class ExtendedPatternInputHatchBlockEntity
          if (var2 != null && var2.isActive()) {
             MEStorage var3 = var2.getGrid().getStorageService().getInventory();
             MachineSource var4 = new MachineSource(this);
-            int var5 = var1 * 9;
-            int var6 = var5 + 9;
-
-            for (ConfigurableItemStack var8 : this.bufferInventory.getItemStacks().subList(var5, var6)) {
-               if (!var8.isEmpty()) {
-                  var8.decrement(var3.insert(AEItemKey.of(var8.toStack()), var8.getAmount(), Actionable.MODULATE, var4));
-               }
-            }
-
-            for (ConfigurableFluidStack var11 : this.bufferInventory.getFluidStacks().subList(var5, var6)) {
-               if (!var11.isEmpty()) {
-                  AEFluidKey var9 = AEFluidKey.of(var11.getResource().getFluid());
-                  var11.decrement(var3.insert(var9, var11.getAmount(), Actionable.MODULATE, var4));
-               }
-            }
-
-            this.setChanged();
+            this.roomStorages[var1].flushTo(var3, var4);
          }
       }
    }
@@ -668,15 +635,7 @@ public class ExtendedPatternInputHatchBlockEntity
       ArrayList<ThreadIsolationRoom> var1 = new ArrayList<>(36);
 
       for (int var2 = 0; var2 < 36; var2++) {
-         int var3 = var2 * 9;
-         int var4 = var3 + 9;
-         var1.add(
-            new ThreadIsolationRoom(
-               "advanced-extended:" + this.getBlockPos().asLong() + ":" + var2,
-               this.bufferInventory.getItemStacks().subList(var3, var4),
-               this.bufferInventory.getFluidStacks().subList(var3, var4)
-            )
-         );
+         var1.add(new ThreadIsolationRoom("advanced-extended:" + this.getBlockPos().asLong() + ":" + var2, this.roomStorages[var2]));
       }
 
       return var1;
@@ -714,6 +673,10 @@ public class ExtendedPatternInputHatchBlockEntity
                      var7 = true;
                   }
                }
+            }
+
+            for (RoomInputStorage roomStorage : this.roomStorages) {
+               var7 |= roomStorage.flushTo(var5, var6, var1);
             }
 
             if (var7) {
@@ -787,7 +750,54 @@ public class ExtendedPatternInputHatchBlockEntity
          }
       }
 
+      for (RoomInputStorage roomStorage : this.roomStorages) {
+         roomStorage.addItemDrops(var1);
+      }
+
       return var1;
+   }
+
+   private void writeRoomStorageNbt(CompoundTag tag, HolderLookup.Provider provider) {
+      tag.putInt("aeindInputStorageVersion", INPUT_STORAGE_VERSION);
+      ListTag rooms = new ListTag();
+      for (RoomInputStorage roomStorage : this.roomStorages) {
+         rooms.add(roomStorage.writeNbt(provider));
+      }
+      tag.put("aeindInputRooms", rooms);
+   }
+
+   private void readRoomStorageNbt(CompoundTag tag, HolderLookup.Provider provider) {
+      for (RoomInputStorage roomStorage : this.roomStorages) {
+         roomStorage.clear();
+      }
+      if (tag.getInt("aeindInputStorageVersion") >= INPUT_STORAGE_VERSION && tag.contains("aeindInputRooms")) {
+         ListTag rooms = tag.getList("aeindInputRooms", 9);
+         for (int room = 0; room < this.roomStorages.length; room++) {
+            if (room < rooms.size()) {
+               this.roomStorages[room].readNbt(rooms.getList(room), provider);
+            } else {
+               this.migrateLegacyRoom(room);
+            }
+         }
+      } else {
+         for (int room = 0; room < this.roomStorages.length; room++) {
+            this.migrateLegacyRoom(room);
+         }
+      }
+   }
+
+   private void migrateLegacyRoom(int room) {
+      int start = room * SLOTS_PER_ROOM;
+      int end = start + SLOTS_PER_ROOM;
+      List<ConfigurableItemStack> items = this.bufferInventory.getItemStacks().subList(start, end);
+      List<ConfigurableFluidStack> fluids = this.bufferInventory.getFluidStacks().subList(start, end);
+      this.roomStorages[room].importLegacy(items, fluids);
+      for (ConfigurableItemStack stack : items) {
+         stack.decrement(stack.getAmount());
+      }
+      for (ConfigurableFluidStack stack : fluids) {
+         stack.decrement(stack.getAmount());
+      }
    }
 
    public ContainerData getContainerData() {

@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.world.item.ItemStack;
@@ -126,10 +127,17 @@ public final class AEKeyLongStorage {
     }
 
     public boolean flushTo(MEStorage target, IActionSource source) {
+        return this.flushTo(target, source, key -> true);
+    }
+
+    public boolean flushTo(MEStorage target, IActionSource source, Predicate<AEKey> filter) {
         boolean changed = false;
         Iterator<Map.Entry<AEKey, Long>> iterator = this.contents.entrySet().iterator();
         while (iterator.hasNext()) {
             Map.Entry<AEKey, Long> entry = iterator.next();
+            if (!filter.test(entry.getKey())) {
+                continue;
+            }
             long stored = entry.getValue();
             long inserted = target.insert(entry.getKey(), stored, Actionable.MODULATE, source);
             if (inserted <= 0L) {

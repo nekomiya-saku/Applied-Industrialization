@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import aztech.modern_industrialization.thirdparty.fabrictransfer.api.fluid.FluidVariant;
 import aztech.modern_industrialization.thirdparty.fabrictransfer.api.item.ItemVariant;
 import net.minecraft.core.HolderLookup;
@@ -57,6 +58,10 @@ public final class RoomInputStorage {
 
     public boolean flushTo(MEStorage target, IActionSource source) {
         return this.storage.flushTo(target, source);
+    }
+
+    public boolean flushTo(MEStorage target, IActionSource source, Predicate<AEKey> filter) {
+        return this.storage.flushTo(target, source, filter);
     }
 
     public ListTag writeNbt(HolderLookup.Provider provider) {
