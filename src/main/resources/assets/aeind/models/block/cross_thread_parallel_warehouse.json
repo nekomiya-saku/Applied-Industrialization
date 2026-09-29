@@ -1,6 +1,7 @@
 {
-  "parent": "minecraft:block/cube_all",
-  "textures": {
-    "all": "aeind:block/thread_warehouse"
-  }
+  "casing": "mv",
+  "default_overlays": {
+    "side": "aeind:block/thread_warehouse"
+  },
+  "loader": "modern_industrialization:machine"
 }

@@ -54,6 +54,10 @@ public class ThreadWarehouseBlock extends BaseEntityBlock {
    @Nullable
    @Override
    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level var1, BlockState var2, BlockEntityType<T> var3) {
-      return null;
+      return var1.isClientSide ? null : (level, pos, state, blockEntity) -> {
+         if (blockEntity instanceof ThreadWarehouseBlockEntity warehouse) {
+            warehouse.tick();
+         }
+      };
    }
 }

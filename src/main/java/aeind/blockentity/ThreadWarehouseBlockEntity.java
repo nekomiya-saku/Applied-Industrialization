@@ -57,6 +57,6 @@ public class ThreadWarehouseBlockEntity extends HatchBlockEntity implements Thre
 
    @Override
    public MachineModelClientData getMachineModelData() {
-      return new MachineModelClientData();
+      return super.getMachineModelData();
    }
 }
