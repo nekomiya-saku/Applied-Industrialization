@@ -8,6 +8,7 @@ import aeind.cross_thread.CrossThreadControllerAccess;
 import aeind.cross_thread.CrossThreadRecipeManager;
 import aeind.isolation.OverdriveBlocker;
 import aeind.isolation.ThreadIsolationAccess;
+import aeind.isolation.ThreadIsolationRoom;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -31,17 +32,19 @@ public abstract class AbstractCraftingMultiblockBlockEntityMixin implements Cros
    )
    private boolean aeind$tickCrossThreadRecipes(CrafterComponent var1) {
       if (var1.getInventory() instanceof ThreadIsolationAccess var2) {
-         if (var2.aeind$crossThreadEnabled()) {
-            CrafterComponentAccessor var4 = (CrafterComponentAccessor)var1;
-            if (!this.aeind$crossThreadManager.hasWork() && var4.aeind$getUsedEnergy() > 0L) {
+         boolean crossThreadEnabled = var2.aeind$crossThreadEnabled();
+         boolean hasMapStorageRooms = var2.aeind$isolationRooms().stream().anyMatch(ThreadIsolationRoom::hasMapStorage);
+         if (crossThreadEnabled || hasMapStorageRooms) {
+            CrafterComponentAccessor accessor = (CrafterComponentAccessor)var1;
+            if (!this.aeind$crossThreadManager.hasWork() && accessor.aeind$getUsedEnergy() > 0L) {
                return var1.tickRecipe();
             }
 
-            if (var4.aeind$getUsedEnergy() == 0L) {
-               aeind$resetIdleLegacyCrafter(var4);
+            if (accessor.aeind$getUsedEnergy() == 0L) {
+               aeind$resetIdleLegacyCrafter(accessor);
             }
 
-            return this.aeind$crossThreadManager.tick((MachineBlockEntity)(Object)this, var1, var2, true);
+            return this.aeind$crossThreadManager.tick((MachineBlockEntity)(Object)this, var1, var2, crossThreadEnabled);
          } else {
             return this.aeind$crossThreadManager.hasWork()
                ? this.aeind$crossThreadManager.tick((MachineBlockEntity)(Object)this, var1, var2, false)

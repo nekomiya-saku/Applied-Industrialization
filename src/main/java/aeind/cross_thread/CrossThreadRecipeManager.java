@@ -102,14 +102,17 @@ public final class CrossThreadRecipeManager {
       }
 
       boolean var29 = this.flushCompletedOutputs(var2.getInventory());
-      if (var4 && var5.isEnabled()) {
-         int var31 = MIParallelHatchCompat.getParallelLimit(var1);
-         int var9 = Math.max(Math.max(1, var3.aeind$maxParallelPerThread()), var31);
+      if (var5.isEnabled()) {
+         int var31 = var4 ? MIParallelHatchCompat.getParallelLimit(var1) : 1;
+         int var9 = var4 ? Math.max(Math.max(1, var3.aeind$maxParallelPerThread()), var31) : 1;
 
          for (ThreadIsolationRoom var11 : var6.values()) {
+            if (!var4 && this.hasWork()) {
+               break;
+            }
             CrossThreadRecipeManager.RecipeThreadState var12 = this.states.computeIfAbsent(var11.id(), CrossThreadRecipeManager.RecipeThreadState::new);
             if (!var12.hasWork()) {
-               boolean var13 = this.tryStart(var1, var2, var11, var12, var9, var31 > 1);
+               boolean var13 = this.tryStart(var1, var2, var11, var12, var9, var4 && var31 > 1);
                var29 |= var13;
                if (!var13 && var12.efficiencyTicks > 0) {
                   var12.efficiencyTicks--;
@@ -200,7 +203,10 @@ public final class CrossThreadRecipeManager {
          }
       }
 
-      Collection<RecipeHolder<MachineRecipe>> var15 = CrafterComponent.getRecipes(var7.getCrafterWorld(), var7.recipeType(), var3.itemInputs());
+      List<ConfigurableItemStack> var14 = var3.hasMapStorage()
+         ? var3.inputStorage().createMiView().itemInputs()
+         : var3.itemInputs();
+      Collection<RecipeHolder<MachineRecipe>> var15 = CrafterComponent.getRecipes(var7.getCrafterWorld(), var7.recipeType(), var14);
       ArrayList<RecipeHolder<MachineRecipe>> var16 = new ArrayList<>(var15);
       var16.sort(Comparator.comparing(var0 -> var0.id().toString()));
 
