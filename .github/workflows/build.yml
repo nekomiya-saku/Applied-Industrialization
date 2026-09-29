@@ -9,9 +9,6 @@ on:
 permissions:
   contents: write
 
-env:
-  MOD_VERSION: 1.2.7
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,6 +16,14 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+
+      - name: Read mod version
+        shell: bash
+        run: |
+          set -euo pipefail
+          mod_version="$(sed -n 's/^mod_version=//p' gradle.properties | head -n 1)"
+          test -n "$mod_version"
+          echo "MOD_VERSION=$mod_version" >> "$GITHUB_ENV"
 
       - name: Set up Java 21
         uses: actions/setup-java@v4
