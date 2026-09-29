@@ -3,9 +3,7 @@
 NeoForge 1.21.1 addon for Applied Energistics 2 and Modern Industrialization.
 
 Applied Industrialization adds ME-aware pattern input and output hatches for
-Modern Industrialization multiblocks, including advanced isolated pattern
-input hatches, cross-thread parallel processing, long-count ME output storage,
-and optional Productive Bees/ExtendedAE/MIParallelHatch integrations.
+Modern Industrialization multiblocks.
 
 ## Build
 
