@@ -24,7 +24,7 @@ license="All Rights Reserved"
 modId="aeind" #mandatory
 
 # The version number of the mod
-version="1.2.7" #mandatory
+version="${version}" #mandatory
 
 # A display name for the mod
 displayName="Applied Industrialization" #mandatory

@@ -1,13 +1,14 @@
 package aeind.mixin;
 
 import aztech.modern_industrialization.api.machine.component.FluidAccess;
-import aztech.modern_industrialization.compat.jade.server.MachineComponentProvider.Fluids;
 import java.util.List;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 
-@Mixin(Fluids.class)
+@Pseudo
+@Mixin(targets = "aztech.modern_industrialization.compat.jade.server.MachineComponentProvider$Fluids", remap = false)
 public abstract class MachineComponentFluidsProviderMixin {
    @ModifyArg(
       method = "getGroups",
