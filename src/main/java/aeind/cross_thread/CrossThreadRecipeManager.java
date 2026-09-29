@@ -1,5 +1,9 @@
 package aeind.cross_thread;
 
+import appeng.api.config.Actionable;
+import appeng.api.stacks.AEFluidKey;
+import appeng.api.stacks.AEItemKey;
+import appeng.api.stacks.AEKey;
 import aztech.modern_industrialization.inventory.AbstractConfigurableStack;
 import aztech.modern_industrialization.inventory.ConfigurableFluidStack;
 import aztech.modern_industrialization.inventory.ConfigurableItemStack;
@@ -17,6 +21,7 @@ import aztech.modern_industrialization.thirdparty.fabrictransfer.api.fluid.Fluid
 import aztech.modern_industrialization.thirdparty.fabrictransfer.api.item.ItemVariant;
 import aztech.modern_industrialization.util.Simulation;
 import aeind.compat.MIParallelHatchCompat;
+import aeind.isolation.RoomInputStorage;
 import aeind.isolation.ThreadIsolationAccess;
 import aeind.isolation.ThreadIsolationRoom;
 import java.util.ArrayList;
@@ -319,8 +324,19 @@ public final class CrossThreadRecipeManager {
    }
 
    private static boolean canTakeInputs(Behavior var0, ThreadIsolationRoom var1, MachineRecipe var2, int var3) {
-      ArrayList<ConfigurableItemStack> var4 = ConfigurableItemStack.copyList(var1.itemInputs());
-      ArrayList<ConfigurableFluidStack> var5 = ConfigurableFluidStack.copyList(var1.fluidInputs());
+      List<ConfigurableItemStack> sourceItems;
+      List<ConfigurableFluidStack> sourceFluids;
+      if (var1.hasMapStorage()) {
+         RoomInputStorage.MiInputView view = var1.inputStorage().createMiView();
+         sourceItems = view.itemInputs();
+         sourceFluids = view.fluidInputs();
+      } else {
+         sourceItems = var1.itemInputs();
+         sourceFluids = var1.fluidInputs();
+      }
+
+      ArrayList<ConfigurableItemStack> var4 = ConfigurableItemStack.copyList(sourceItems);
+      ArrayList<ConfigurableFluidStack> var5 = ConfigurableFluidStack.copyList(sourceFluids);
 
       for (int var6 = 0; var6 < var3; var6++) {
          if (!takeItemInputs(null, var4, var2, true) || !takeFluidInputs(var0, var5, var2, true)) {
@@ -336,6 +352,25 @@ public final class CrossThreadRecipeManager {
          return false;
       }
 
+      if (var1.hasMapStorage()) {
+         RoomInputStorage storage = var1.inputStorage();
+         RoomInputStorage.MiInputView view = storage.createMiView();
+         for (int var4 = 0; var4 < var3; var4++) {
+            if (!takeItemInputs(var0, view.itemInputs(), var2, false, false)
+               || !takeFluidInputs(var0, view.fluidInputs(), var2, false, false)) {
+               return false;
+            }
+         }
+
+         Map<AEKey, Long> consumed = view.consumedAmounts();
+         if (!storage.extractAll(consumed, Actionable.SIMULATE)
+            || !storage.extractAll(consumed, Actionable.MODULATE)) {
+            return false;
+         }
+         recordConsumedInputs(var0, consumed);
+         return true;
+      }
+
       for (int var4 = 0; var4 < var3; var4++) {
          takeItemInputs(var0, var1.itemInputs(), var2, false);
          takeFluidInputs(var0, var1.fluidInputs(), var2, false);
@@ -345,6 +380,12 @@ public final class CrossThreadRecipeManager {
    }
 
    private static boolean takeItemInputs(Behavior var0, List<ConfigurableItemStack> var1, MachineRecipe var2, boolean var3) {
+      return takeItemInputs(var0, var1, var2, var3, true);
+   }
+
+   private static boolean takeItemInputs(
+      Behavior var0, List<ConfigurableItemStack> var1, MachineRecipe var2, boolean var3, boolean recordStats
+   ) {
       for (ItemInput var5 : var2.itemInputs) {
          if (var3 || !(var5.probability() < 1.0F) || !(ThreadLocalRandom.current().nextFloat() >= var5.probability())) {
             int var6 = var5.amount();
@@ -353,7 +394,7 @@ public final class CrossThreadRecipeManager {
                if (var8.getAmount() > 0L && var8.getResource().test(var5.ingredient())) {
                   int var9 = (int)Math.min(var8.getAmount(), var6);
                   if (var9 > 0) {
-                     if (!var3) {
+                     if (!var3 && recordStats) {
                         var0.getStatsOrDummy().addUsedItems(var8.getResource().getItem(), var9);
                      }
 
@@ -377,6 +418,12 @@ public final class CrossThreadRecipeManager {
    }
 
    private static boolean takeFluidInputs(Behavior var0, List<ConfigurableFluidStack> var1, MachineRecipe var2, boolean var3) {
+      return takeFluidInputs(var0, var1, var2, var3, true);
+   }
+
+   private static boolean takeFluidInputs(
+      Behavior var0, List<ConfigurableFluidStack> var1, MachineRecipe var2, boolean var3, boolean recordStats
+   ) {
       boolean[] var4 = var0 != null && var0.oneFluidInputPerStack() ? new boolean[var1.size()] : null;
 
       for (FluidInput var6 : var2.fluidInputs) {
@@ -389,7 +436,7 @@ public final class CrossThreadRecipeManager {
                   if (var10.getAmount() > 0L && var6.fluid().test(var10.toStack())) {
                      long var11 = Math.min(var10.getAmount(), var7);
                      if (var11 > 0L) {
-                        if (!var3) {
+                        if (!var3 && recordStats) {
                            var0.getStatsOrDummy().addUsedFluids(var10.getResource().getFluid(), var11);
                         }
 
@@ -415,6 +462,21 @@ public final class CrossThreadRecipeManager {
       }
 
       return true;
+   }
+
+   private static void recordConsumedInputs(Behavior behavior, Map<AEKey, Long> consumed) {
+      for (Map.Entry<AEKey, Long> entry : consumed.entrySet()) {
+         long amount = entry.getValue();
+         if (entry.getKey() instanceof AEItemKey itemKey) {
+            while (amount > 0L) {
+               int chunk = (int)Math.min(amount, Integer.MAX_VALUE);
+               behavior.getStatsOrDummy().addUsedItems(itemKey.toStack().getItem(), chunk);
+               amount -= chunk;
+            }
+         } else if (entry.getKey() instanceof AEFluidKey fluidKey) {
+            behavior.getStatsOrDummy().addUsedFluids(fluidKey.getFluid(), amount);
+         }
+      }
    }
 
    private static List<ConfigurableItemStack> maximumItemOutputs(MachineRecipe var0, int var1) {
