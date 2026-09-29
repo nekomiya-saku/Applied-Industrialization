@@ -14,7 +14,7 @@ DEPENDENCIES = (
     (
         "libs/Modern-Industrialization-2.5.6.jar",
         "https://cdn.modrinth.com/data/Gov5Dboq/versions/E1nD4PKl/Modern-Industrialization-2.5.6.jar",
-        "ee98da11ae52892e5ce60ef87367bf681b3c8e2184200337a64cc71e16133ae1cabb2dd4016e6dd200b476d6d7378aed0f82fa65026150e63aec0ff09bac3b3a",
+        "ee98da11ae52892ce5e60ef87367bf681b3c8e2184200337a64cc71e16133ae1cabb2dd4016e6dd200b476d6d7378aed0f82fa65026150e63aec0ff09bac3b3a",
     ),
     (
         "libs/Jade-1.21.1-NeoForge-15.10.6.jar",
