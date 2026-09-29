@@ -76,10 +76,6 @@ repositories {
     mavenCentral()
 }
 
-sourceSets {
-    main { java.srcDir 'src/main/java'; resources.srcDir 'src/main/resources' }
-}
-
 neoForge {
     version = project.neoforge_version
     parchment {
