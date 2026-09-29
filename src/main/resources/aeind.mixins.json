@@ -13,6 +13,7 @@
         "CrafterComponentAccessor",
         "AbstractCraftingMultiblockBlockEntityMixin",
         "CraftingMultiblockProgressGuiMixin",
+        "HatchBlockEntityMixin",
         "MachineBlockEntityMixin",
         "OverdriveComponentMixin",
         "SlotPanelMixin"
