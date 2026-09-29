@@ -8,6 +8,7 @@ import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.storage.MEStorage;
 import java.util.Iterator;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +27,18 @@ public final class AEKeyLongStorage {
 
     public boolean isEmpty() {
         return this.contents.isEmpty();
+    }
+
+    public int size() {
+        return this.contents.size();
+    }
+
+    public long getAmount(AEKey key) {
+        return key == null ? 0L : this.contents.getOrDefault(key, 0L);
+    }
+
+    public Map<AEKey, Long> snapshot() {
+        return Collections.unmodifiableMap(new LinkedHashMap<>(this.contents));
     }
 
     public long insert(AEKey key, long amount, Actionable mode) {
@@ -57,6 +70,53 @@ public final class AEKeyLongStorage {
             this.onChanged.run();
         }
         return extracted;
+    }
+
+    /**
+     * Atomically extracts all requested amounts. No entry is changed unless every
+     * positive request can be satisfied in full.
+     */
+    public boolean extractAll(Map<AEKey, Long> requested, Actionable mode) {
+        if (requested == null || requested.isEmpty()) {
+            return true;
+        }
+        for (Map.Entry<AEKey, Long> entry : requested.entrySet()) {
+            AEKey key = entry.getKey();
+            long amount = entry.getValue() == null ? 0L : entry.getValue();
+            if (key == null || amount < 0L || this.getAmount(key) < amount) {
+                return false;
+            }
+        }
+        if (mode != Actionable.MODULATE) {
+            return true;
+        }
+
+        boolean changed = false;
+        for (Map.Entry<AEKey, Long> entry : requested.entrySet()) {
+            long amount = entry.getValue() == null ? 0L : entry.getValue();
+            if (amount <= 0L) {
+                continue;
+            }
+            AEKey key = entry.getKey();
+            long remaining = this.contents.get(key) - amount;
+            if (remaining == 0L) {
+                this.contents.remove(key);
+            } else {
+                this.contents.put(key, remaining);
+            }
+            changed = true;
+        }
+        if (changed) {
+            this.onChanged.run();
+        }
+        return true;
+    }
+
+    public void clear() {
+        if (!this.contents.isEmpty()) {
+            this.contents.clear();
+            this.onChanged.run();
+        }
     }
 
     public void getAvailableStacks(KeyCounter output) {
