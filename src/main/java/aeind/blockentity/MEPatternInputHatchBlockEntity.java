@@ -122,6 +122,7 @@ public class MEPatternInputHatchBlockEntity
             MEPatternInputHatchBlockEntity.this.mainNode.saveToNBT(var1);
             MEPatternInputHatchBlockEntity.this.patternLogic.writeToNBT(var1, var2x);
             MEPatternInputHatchBlockEntity.this.upgrades.writeToNBT(var1, "upgrades", var2x);
+            MEPatternInputHatchBlockEntity.this.writeRoomStorageNbt(var1, var2x);
             var1.putInt("blockingMode", MEPatternInputHatchBlockEntity.this.blockingMode);
             var1.putInt("redstoneMode", MEPatternInputHatchBlockEntity.this.redstoneMode);
             if (MEPatternInputHatchBlockEntity.this.customName != null) {
@@ -134,6 +135,7 @@ public class MEPatternInputHatchBlockEntity
             MEPatternInputHatchBlockEntity.this.mainNode.loadFromNBT(var1);
             MEPatternInputHatchBlockEntity.this.patternLogic.readFromNBT(var1, var2x);
             MEPatternInputHatchBlockEntity.this.upgrades.readFromNBT(var1, "upgrades", var2x);
+            MEPatternInputHatchBlockEntity.this.readRoomStorageNbt(var1, var2x);
             if (var1.contains("blockingMode")) {
                MEPatternInputHatchBlockEntity.this.blockingMode = var1.getInt("blockingMode");
             }
@@ -698,7 +700,18 @@ public class MEPatternInputHatchBlockEntity
          }
       }
 
+      this.addRoomStorageDrops(var1);
+
       return var1;
+   }
+
+   protected void writeRoomStorageNbt(CompoundTag tag, HolderLookup.Provider provider) {
+   }
+
+   protected void readRoomStorageNbt(CompoundTag tag, HolderLookup.Provider provider) {
+   }
+
+   protected void addRoomStorageDrops(List<ItemStack> drops) {
    }
 
    public ContainerData getContainerData() {

@@ -51,6 +51,10 @@ public final class RoomInputStorage {
         return this.storage.extractAll(requested, mode);
     }
 
+    public void clear() {
+        this.storage.clear();
+    }
+
     public boolean flushTo(MEStorage target, IActionSource source) {
         return this.storage.flushTo(target, source);
     }
