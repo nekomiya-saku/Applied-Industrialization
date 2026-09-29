@@ -1,6 +1,9 @@
 {
-  "parent": "minecraft:block/cube_all",
-  "textures": {
-    "all": "aeind:block/advanced_extended_pattern_input_hatch"
-  }
+  "casing": "mv",
+  "default_overlays": {
+    "item_auto": "modern_industrialization:block/overlays/item_auto",
+    "output": "modern_industrialization:block/overlays/output_item",
+    "side": "modern_industrialization:block/machines/hatch_item/overlay_side"
+  },
+  "loader": "modern_industrialization:machine"
 }

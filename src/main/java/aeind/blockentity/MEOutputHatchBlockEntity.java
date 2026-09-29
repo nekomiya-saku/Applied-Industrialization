@@ -220,7 +220,7 @@ IActionHost {
     }
 
     public MachineModelClientData getMachineModelData() {
-        return new MachineModelClientData();
+        return super.getMachineModelData();
     }
 
     public void appendItemOutputs(List<ConfigurableItemStack> list) {
@@ -235,6 +235,7 @@ IActionHost {
         if (level.isClientSide) {
             return;
         }
+        mEOutputHatchBlockEntity.tick();
         ++mEOutputHatchBlockEntity.tickCount;
         if (mEOutputHatchBlockEntity.tickCount % 1 != 0) {
             return;

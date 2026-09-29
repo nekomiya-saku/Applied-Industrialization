@@ -350,7 +350,7 @@ public class ExtendedPatternInputHatchBlockEntity
 
    @Override
    public MachineModelClientData getMachineModelData() {
-      return new MachineModelClientData();
+      return super.getMachineModelData();
    }
 
    @Override
@@ -708,6 +708,7 @@ public class ExtendedPatternInputHatchBlockEntity
 
    public static void serverTick(Level var0, BlockPos var1, BlockState var2, ExtendedPatternInputHatchBlockEntity var3) {
       if (!var0.isClientSide) {
+         var3.tick();
          var3.tickCount++;
          if (var3.tickCount % 20 == 0) {
             var3.doWork();
