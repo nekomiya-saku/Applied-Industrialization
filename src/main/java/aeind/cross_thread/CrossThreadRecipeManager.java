@@ -24,6 +24,7 @@ import aeind.compat.MIParallelHatchCompat;
 import aeind.isolation.RoomInputStorage;
 import aeind.isolation.ThreadIsolationAccess;
 import aeind.isolation.ThreadIsolationRoom;
+import com.mojang.logging.LogUtils;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -37,11 +38,14 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.material.Fluid;
+import org.slf4j.Logger;
 
 public final class CrossThreadRecipeManager {
    public static final String NBT_KEY = "aeindCrossThreadRecipes";
    private static final int NBT_VERSION = 2;
+   private static final Logger LOGGER = LogUtils.getLogger();
    private final Map<String, CrossThreadRecipeManager.RecipeThreadState> states = new LinkedHashMap<>();
+   private final Map<String, Integer> reportedParallelByRoom = new LinkedHashMap<>();
    private int fairnessCursor;
 
    public boolean hasWork() {
@@ -53,7 +57,15 @@ public final class CrossThreadRecipeManager {
    }
 
    public int getTotalActiveParallel() {
-      return this.states.values().stream().filter(CrossThreadRecipeManager.RecipeThreadState::isRunning).mapToInt(var0 -> var0.parallel).sum();
+      long var1 = 0L;
+
+      for (CrossThreadRecipeManager.RecipeThreadState var4 : this.states.values()) {
+         if (var4.isRunning()) {
+            var1 = saturatedAdd(var1, var4.parallel);
+         }
+      }
+
+      return (int)Math.min(var1, Integer.MAX_VALUE);
    }
 
    public int getMaxActiveParallel() {
@@ -224,20 +236,20 @@ public final class CrossThreadRecipeManager {
    }
 
    private int findParallel(CrafterComponent var1, ThreadIsolationRoom var2, MachineRecipe var3, int var4) {
-      int var5 = Math.min(Math.max(1, var4), 1024);
-      int var6 = 1;
-      int var7 = var5;
+      int var5 = Math.max(1, var4);
+      long var6 = 1L;
+      long var7 = var5;
       int var8 = 0;
 
       while (var6 <= var7) {
-         int var9 = var6 + (var7 - var6) / 2;
+         int var9 = (int)(var6 + (var7 - var6) / 2L);
          boolean var10 = canTakeInputs(var1.getBehavior(), var2, var3, var9)
             && this.canReserveOutputs(var1.getInventory(), var3, var9, var1.getBehavior().getMaxFluidOutputs());
          if (var10) {
             var8 = var9;
-            var6 = var9 + 1;
+            var6 = (long)var9 + 1L;
          } else {
-            var7 = var9 - 1;
+            var7 = (long)var9 - 1L;
          }
       }
 
@@ -260,6 +272,10 @@ public final class CrossThreadRecipeManager {
 
       var4.recipeId = var5.id();
       var4.parallel = var6;
+      Integer var9 = this.reportedParallelByRoom.put(var3.id(), var6);
+      if (var9 == null || var9 != var6) {
+         LOGGER.info("Cross-thread room {} selected {} parallel for recipe {}", var3.id(), var6, var5.id());
+      }
       var4.energyFactor = var7 ? MIParallelHatchCompat.getEnergyFactor(var1, var6) : var6;
       var4.usedEnergy = 0L;
       var4.totalEnergy = MIParallelHatchCompat.scaleEnergy(var8.getTotalEu(), var6, var4.energyFactor);
@@ -343,14 +359,7 @@ public final class CrossThreadRecipeManager {
 
       ArrayList<ConfigurableItemStack> var4 = ConfigurableItemStack.copyList(sourceItems);
       ArrayList<ConfigurableFluidStack> var5 = ConfigurableFluidStack.copyList(sourceFluids);
-
-      for (int var6 = 0; var6 < var3; var6++) {
-         if (!takeItemInputs(null, var4, var2, true) || !takeFluidInputs(var0, var5, var2, true)) {
-            return false;
-         }
-      }
-
-      return true;
+      return takeItemInputs(var0, var4, var2, var3, true, false) && takeFluidInputs(var0, var5, var2, var3, true, false);
    }
 
    private static boolean takeInputs(Behavior var0, ThreadIsolationRoom var1, MachineRecipe var2, int var3) {
@@ -361,11 +370,9 @@ public final class CrossThreadRecipeManager {
       if (var1.hasMapStorage()) {
          RoomInputStorage storage = var1.inputStorage();
          RoomInputStorage.MiInputView view = storage.createMiView();
-         for (int var4 = 0; var4 < var3; var4++) {
-            if (!takeItemInputs(var0, view.itemInputs(), var2, false, false)
-               || !takeFluidInputs(var0, view.fluidInputs(), var2, false, false)) {
-               return false;
-            }
+         if (!takeItemInputs(var0, view.itemInputs(), var2, var3, false, false)
+            || !takeFluidInputs(var0, view.fluidInputs(), var2, var3, false, false)) {
+            return false;
          }
 
          Map<AEKey, Long> consumed = view.consumedAmounts();
@@ -377,97 +384,108 @@ public final class CrossThreadRecipeManager {
          return true;
       }
 
-      for (int var4 = 0; var4 < var3; var4++) {
-         takeItemInputs(var0, var1.itemInputs(), var2, false);
-         takeFluidInputs(var0, var1.fluidInputs(), var2, false);
+      return takeItemInputs(var0, var1.itemInputs(), var2, var3, false, true)
+         && takeFluidInputs(var0, var1.fluidInputs(), var2, var3, false, true);
+   }
+
+   private static boolean takeItemInputs(
+      Behavior var0, List<ConfigurableItemStack> var1, MachineRecipe var2, int var3, boolean var4, boolean var5
+   ) {
+      for (ItemInput var7 : var2.itemInputs) {
+         long var8 = var4 ? var3 : sampleOccurrences(var3, var7.probability());
+         long var10 = saturatedMultiply(var7.amount(), var8);
+
+         for (ConfigurableItemStack var13 : var1) {
+            if (var13.getAmount() > 0L && var13.getResource().test(var7.ingredient())) {
+               long var14 = Math.min(var13.getAmount(), var10);
+               if (var14 > 0L) {
+                  if (!var4 && var5) {
+                     var0.getStatsOrDummy().addUsedItems(var13.getResource().getItem(), var14);
+                  }
+
+                  var13.decrement(var14);
+                  var10 -= var14;
+               }
+
+               if (var10 == 0L) {
+                  break;
+               }
+            }
+         }
+
+         if (var10 > 0L) {
+            return false;
+         }
       }
 
       return true;
    }
 
-   private static boolean takeItemInputs(Behavior var0, List<ConfigurableItemStack> var1, MachineRecipe var2, boolean var3) {
-      return takeItemInputs(var0, var1, var2, var3, true);
-   }
-
-   private static boolean takeItemInputs(
-      Behavior var0, List<ConfigurableItemStack> var1, MachineRecipe var2, boolean var3, boolean recordStats
+   private static boolean takeFluidInputs(
+      Behavior var0, List<ConfigurableFluidStack> var1, MachineRecipe var2, int var3, boolean var4, boolean var5
    ) {
-      for (ItemInput var5 : var2.itemInputs) {
-         if (var3 || !(var5.probability() < 1.0F) || !(ThreadLocalRandom.current().nextFloat() >= var5.probability())) {
-            int var6 = var5.amount();
+      boolean[] var6 = var0 != null && var0.oneFluidInputPerStack() ? new boolean[var1.size()] : null;
 
-            for (ConfigurableItemStack var8 : var1) {
-               if (var8.getAmount() > 0L && var8.getResource().test(var5.ingredient())) {
-                  int var9 = (int)Math.min(var8.getAmount(), var6);
-                  if (var9 > 0) {
-                     if (!var3 && recordStats) {
-                        var0.getStatsOrDummy().addUsedItems(var8.getResource().getItem(), var9);
+      for (FluidInput var8 : var2.fluidInputs) {
+         long var9 = var4 ? var3 : sampleOccurrences(var3, var8.probability());
+         long var11 = saturatedMultiply(var8.amount(), var9);
+
+         for (int var13 = 0; var13 < var1.size(); var13++) {
+            if (var6 == null || !var6[var13]) {
+               ConfigurableFluidStack var14 = var1.get(var13);
+               if (var14.getAmount() > 0L && var8.fluid().test(var14.toStack())) {
+                  long var15 = Math.min(var14.getAmount(), var11);
+                  if (var15 > 0L) {
+                     if (!var4 && var5) {
+                        var0.getStatsOrDummy().addUsedFluids(var14.getResource().getFluid(), var15);
                      }
 
-                     var8.decrement(var9);
-                     var6 -= var9;
+                     var14.decrement(var15);
+                     if (var6 != null) {
+                        var6[var13] = true;
+                     }
+
+                     var11 -= var15;
                   }
 
-                  if (var6 == 0) {
+                  if (var11 == 0L) {
                      break;
                   }
                }
             }
+         }
 
-            if (var6 > 0) {
-               return false;
-            }
+         if (var11 > 0L) {
+            return false;
          }
       }
 
       return true;
    }
 
-   private static boolean takeFluidInputs(Behavior var0, List<ConfigurableFluidStack> var1, MachineRecipe var2, boolean var3) {
-      return takeFluidInputs(var0, var1, var2, var3, true);
-   }
+   private static long sampleOccurrences(int var0, float var1) {
+      if (var0 <= 0 || var1 <= 0.0F) {
+         return 0L;
+      }
+      if (var1 >= 1.0F) {
+         return var0;
+      }
+      if (var0 <= 4096) {
+         long var2 = 0L;
 
-   private static boolean takeFluidInputs(
-      Behavior var0, List<ConfigurableFluidStack> var1, MachineRecipe var2, boolean var3, boolean recordStats
-   ) {
-      boolean[] var4 = var0 != null && var0.oneFluidInputPerStack() ? new boolean[var1.size()] : null;
-
-      for (FluidInput var6 : var2.fluidInputs) {
-         if (var3 || !(var6.probability() < 1.0F) || !(ThreadLocalRandom.current().nextFloat() >= var6.probability())) {
-            long var7 = var6.amount();
-
-            for (int var9 = 0; var9 < var1.size(); var9++) {
-               if (var4 == null || !var4[var9]) {
-                  ConfigurableFluidStack var10 = (ConfigurableFluidStack)var1.get(var9);
-                  if (var10.getAmount() > 0L && var6.fluid().test(var10.toStack())) {
-                     long var11 = Math.min(var10.getAmount(), var7);
-                     if (var11 > 0L) {
-                        if (!var3 && recordStats) {
-                           var0.getStatsOrDummy().addUsedFluids(var10.getResource().getFluid(), var11);
-                        }
-
-                        var10.decrement(var11);
-                        if (var4 != null) {
-                           var4[var9] = true;
-                        }
-
-                        var7 -= var11;
-                     }
-
-                     if (var7 == 0L) {
-                        break;
-                     }
-                  }
-               }
-            }
-
-            if (var7 > 0L) {
-               return false;
+         for (int var4 = 0; var4 < var0; var4++) {
+            if (ThreadLocalRandom.current().nextFloat() <= var1) {
+               var2++;
             }
          }
+
+         return var2;
       }
 
-      return true;
+      double var6 = (double)var0 * var1;
+      double var8 = Math.sqrt(var6 * (1.0 - var1));
+      long var10 = Math.round(var6 + ThreadLocalRandom.current().nextGaussian() * var8);
+      return Math.max(0L, Math.min(var0, var10));
    }
 
    private static void recordConsumedInputs(Behavior behavior, Map<AEKey, Long> consumed) {
@@ -509,12 +527,11 @@ public final class CrossThreadRecipeManager {
    private static List<ConfigurableItemStack> rollItemOutputs(Behavior var0, MachineRecipe var1, int var2) {
       ArrayList<ConfigurableItemStack> var3 = new ArrayList<>();
 
-      for (int var4 = 0; var4 < var2; var4++) {
-         for (ItemOutput var6 : var1.itemOutputs) {
-            if (var6.probability() >= 1.0F || ThreadLocalRandom.current().nextFloat() <= var6.probability()) {
-               addItem(var3, var6.variant(), var6.amount());
-               var0.getStatsOrDummy().addProducedItems(var0.getCrafterWorld(), var6.variant().getItem(), var6.amount());
-            }
+      for (ItemOutput var5 : var1.itemOutputs) {
+         long var6 = saturatedMultiply(var5.amount(), sampleOccurrences(var2, var5.probability()));
+         if (var6 > 0L) {
+            addItem(var3, var5.variant(), var6);
+            var0.getStatsOrDummy().addProducedItems(var0.getCrafterWorld(), var5.variant().getItem(), var6);
          }
       }
 
@@ -525,13 +542,12 @@ public final class CrossThreadRecipeManager {
       ArrayList<ConfigurableFluidStack> var3 = new ArrayList<>();
       int var4 = var0.getMaxFluidOutputs();
 
-      for (int var5 = 0; var5 < var2; var5++) {
-         for (int var6 = 0; var6 < Math.min(var1.fluidOutputs.size(), var4); var6++) {
-            FluidOutput var7 = var1.fluidOutputs.get(var6);
-            if (var7.probability() >= 1.0F || ThreadLocalRandom.current().nextFloat() <= var7.probability()) {
-               addFluid(var3, var7.fluid(), var7.amount());
-               var0.getStatsOrDummy().addProducedFluids(var7.fluid(), var7.amount());
-            }
+      for (int var5 = 0; var5 < Math.min(var1.fluidOutputs.size(), var4); var5++) {
+         FluidOutput var6 = var1.fluidOutputs.get(var5);
+         long var7 = saturatedMultiply(var6.amount(), sampleOccurrences(var2, var6.probability()));
+         if (var7 > 0L) {
+            addFluid(var3, var6.fluid(), var7);
+            var0.getStatsOrDummy().addProducedFluids(var6.fluid(), var7);
          }
       }
 
@@ -542,7 +558,7 @@ public final class CrossThreadRecipeManager {
       if (var2 > 0L) {
          for (ConfigurableItemStack var5 : var0) {
             if (var5.getResource().equals(var1)) {
-               var5.increment(var2);
+               var5.setAmount(saturatedAdd(var5.getAmount(), var2));
                return;
             }
          }
@@ -583,8 +599,7 @@ public final class CrossThreadRecipeManager {
                boolean var9 = var8.getResource().equals(var3.getResource());
                boolean var10 = var8.isEmpty();
                if ((var6 != 0 || var9) && (var6 != 1 || var10) && var8.isResourceAllowedByLock(var3.getResource())) {
-                  long var11 = Math.min(var8.getAdjustedCapacity(), var3.getResource().getMaxStackSize());
-                  long var13 = Math.min(var4, Math.max(0L, var11 - var8.getAmount()));
+                  long var13 = Math.min(var4, Math.max(0L, var8.getRemainingCapacityFor(var3.getResource())));
                   if (var13 > 0L) {
                      if (var10) {
                         var8.setKey(var3.getResource());

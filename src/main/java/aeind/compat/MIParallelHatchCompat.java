@@ -1,14 +1,20 @@
 package aeind.compat;
 
+import com.mojang.logging.LogUtils;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.WeakHashMap;
 import net.neoforged.fml.ModList;
+import org.slf4j.Logger;
 
 public final class MIParallelHatchCompat {
    public static final String MOD_ID = "miparallelhatch";
-   private static final int HARD_PARALLEL_LIMIT = 1024;
+   private static final Logger LOGGER = LogUtils.getLogger();
+   private static final Map<Object, Integer> REPORTED_LIMITS = new WeakHashMap<>();
    private static final MIParallelHatchCompat.Bridge DISABLED = new MIParallelHatchCompat.Bridge(null, null, null, null);
    private static volatile MIParallelHatchCompat.Bridge bridge;
+   private static volatile boolean invocationFailureReported;
 
    private MIParallelHatchCompat() {
    }
@@ -25,12 +31,27 @@ public final class MIParallelHatchCompat {
 
       try {
          if (var1.parallelCountMethod.invoke(var0) instanceof Number var3) {
-            return Math.clamp(var3.intValue(), 1, 1024);
+            int var4 = Math.max(1, var3.intValue());
+            reportParallelLimit(var0, var4);
+            return var4;
          }
       } catch (ReflectiveOperationException | RuntimeException var4) {
+         if (!invocationFailureReported) {
+            invocationFailureReported = true;
+            LOGGER.warn("Failed to read MIParallelHatch parallel count; cross-thread parallel will fall back to 1", var4);
+         }
       }
 
       return 1;
+   }
+
+   private static void reportParallelLimit(Object var0, int var1) {
+      synchronized (REPORTED_LIMITS) {
+         Integer var2 = REPORTED_LIMITS.put(var0, var1);
+         if (var2 == null || var2 != var1) {
+            LOGGER.info("Applied Industrialization detected MIParallelHatch limit {} for multiblock {}", var1, var0.getClass().getName());
+         }
+      }
    }
 
    public static double getEnergyFactor(Object var0, int var1) {
@@ -101,6 +122,7 @@ public final class MIParallelHatchCompat {
 
          return new MIParallelHatchCompat.Bridge(var1, var2, var3, var4);
       } catch (ReflectiveOperationException | LinkageError | RuntimeException var10) {
+         LOGGER.warn("MIParallelHatch is loaded but its parallel API could not be initialized", var10);
          return DISABLED;
       }
    }
