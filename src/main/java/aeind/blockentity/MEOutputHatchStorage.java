@@ -1,53 +1,87 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  appeng.api.config.Actionable
- *  appeng.api.networking.security.IActionSource
- *  appeng.api.stacks.AEFluidKey
- *  appeng.api.stacks.AEItemKey
- *  appeng.api.stacks.AEKey
- *  appeng.api.stacks.KeyCounter
- *  appeng.api.storage.MEStorage
- *  net.minecraft.network.chat.Component
- *  net.minecraft.world.item.ItemStack
- *  net.neoforged.neoforge.fluids.FluidStack
- *  net.neoforged.neoforge.fluids.capability.IFluidHandler
- *  net.neoforged.neoforge.fluids.capability.IFluidHandler$FluidAction
- *  net.neoforged.neoforge.items.IItemHandler
- */
 package aeind.blockentity;
 
 import appeng.api.config.Actionable;
 import appeng.api.networking.security.IActionSource;
+import appeng.api.stacks.AEFluidKey;
+import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.storage.MEStorage;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.items.IItemHandler;
 
-public class MEOutputHatchStorage
-implements MEStorage {
-    private final MEOutputHatchBlockEntity host;
+public class MEOutputHatchStorage implements MEStorage {
+   private final MEOutputHatchBlockEntity host;
 
-    public MEOutputHatchStorage(MEOutputHatchBlockEntity mEOutputHatchBlockEntity) {
-        this.host = mEOutputHatchBlockEntity;
-    }
+   public MEOutputHatchStorage(MEOutputHatchBlockEntity var1) {
+      this.host = var1;
+   }
 
-    public long insert(AEKey aEKey, long l, Actionable actionable, IActionSource iActionSource) {
-        return 0L;
-    }
+   @Override
+   public long insert(AEKey var1, long var2, Actionable var4, IActionSource var5) {
+      return 0L;
+   }
 
-    public long extract(AEKey aEKey, long l, Actionable actionable, IActionSource iActionSource) {
-        this.host.collectMachineOutputs();
-        return this.host.getOutputBuffer().extract(aEKey, l, actionable);
-    }
+   @Override
+   public long extract(AEKey var1, long var2, Actionable var4, IActionSource var5) {
+      if (var2 <= 0L) {
+         return 0L;
+      }
 
-    public void getAvailableStacks(KeyCounter keyCounter) {
-        this.host.collectMachineOutputs();
-        this.host.getOutputBuffer().getAvailableStacks(keyCounter);
-    }
+      if (!(var1 instanceof AEItemKey var6)) {
+         if (var1 instanceof AEFluidKey var15) {
+            long var16 = Math.min(var2, 2147483647L);
+            FluidStack var17 = this.host
+               .getFluidHandler()
+               .drain(var15.toStack((int)var16), var4 == Actionable.MODULATE ? IFluidHandler.FluidAction.EXECUTE : IFluidHandler.FluidAction.SIMULATE);
+            return var17.getAmount();
+         } else {
+            return 0L;
+         }
+      } else {
+         long var7 = 0L;
+         boolean var9 = var4 != Actionable.MODULATE;
+         IItemHandler var10 = this.host.getBufferInventory();
 
-    public Component getDescription() {
-        return Component.literal((String)"ME Output Hatch Buffer");
-    }
+         for (int var11 = 0; var11 < var10.getSlots() && var7 < var2; var11++) {
+            ItemStack var12 = var10.getStackInSlot(var11);
+            if (!var12.isEmpty() && var6.matches(var12)) {
+               int var13 = (int)Math.min(var2 - var7, var12.getCount());
+               ItemStack var14 = var10.extractItem(var11, var13, var9);
+               var7 += var14.getCount();
+            }
+         }
+
+         return var7;
+      }
+   }
+
+   @Override
+   public void getAvailableStacks(KeyCounter var1) {
+      IItemHandler var2 = this.host.getBufferInventory();
+
+      for (int var3 = 0; var3 < var2.getSlots(); var3++) {
+         ItemStack var4 = var2.getStackInSlot(var3);
+         if (!var4.isEmpty()) {
+            var1.add(AEItemKey.of(var4), var4.getCount());
+         }
+      }
+
+      IFluidHandler var6 = this.host.getFluidHandler();
+
+      for (int var7 = 0; var7 < var6.getTanks(); var7++) {
+         FluidStack var5 = var6.getFluidInTank(var7);
+         if (!var5.isEmpty()) {
+            var1.add(AEFluidKey.of(var5), var5.getAmount());
+         }
+      }
+   }
+
+   @Override
+   public Component getDescription() {
+      return Component.literal("ME Output Hatch Buffer");
+   }
 }

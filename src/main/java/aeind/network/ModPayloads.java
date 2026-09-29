@@ -1,22 +1,7 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.minecraft.server.level.ServerPlayer
- *  net.minecraft.world.entity.player.Player
- *  net.minecraft.world.inventory.AbstractContainerMenu
- *  net.neoforged.bus.api.SubscribeEvent
- *  net.neoforged.fml.common.EventBusSubscriber
- *  net.neoforged.fml.common.EventBusSubscriber$Bus
- *  net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent
- *  net.neoforged.neoforge.network.handling.IPayloadContext
- *  net.neoforged.neoforge.network.registration.PayloadRegistrar
- */
 package aeind.network;
 
 import aeind.gui.ExtendedPatternProviderMenu;
 import aeind.gui.HatchPatternProviderMenu;
-import aeind.network.ServerboundReturnMaterialPayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -26,25 +11,27 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
-@EventBusSubscriber(modid="aeind", bus=EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = "aeind")
 public class ModPayloads {
-    @SubscribeEvent
-    public static void register(RegisterPayloadHandlersEvent registerPayloadHandlersEvent) {
-        PayloadRegistrar payloadRegistrar = registerPayloadHandlersEvent.registrar("1");
-        payloadRegistrar.playToServer(ServerboundReturnMaterialPayload.TYPE, ServerboundReturnMaterialPayload.STREAM_CODEC, ModPayloads::handleReturnMaterial);
-    }
+   @SubscribeEvent
+   public static void register(RegisterPayloadHandlersEvent var0) {
+      PayloadRegistrar var1 = var0.registrar("1");
+      var1.playToServer(ServerboundReturnMaterialPayload.TYPE, ServerboundReturnMaterialPayload.STREAM_CODEC, ModPayloads::handleReturnMaterial);
+   }
 
-    private static void handleReturnMaterial(ServerboundReturnMaterialPayload serverboundReturnMaterialPayload, IPayloadContext iPayloadContext) {
-        AbstractContainerMenu abstractContainerMenu;
-        AbstractContainerMenu abstractContainerMenu2;
-        Player player = iPayloadContext.player();
-        if (player instanceof ServerPlayer && (abstractContainerMenu2 = player.containerMenu) instanceof HatchPatternProviderMenu) {
-            HatchPatternProviderMenu hatchPatternProviderMenu = (HatchPatternProviderMenu)abstractContainerMenu2;
-            hatchPatternProviderMenu.returnMaterial();
-        } else if (player instanceof ServerPlayer && (abstractContainerMenu = player.containerMenu) instanceof ExtendedPatternProviderMenu) {
-            ExtendedPatternProviderMenu extendedPatternProviderMenu = (ExtendedPatternProviderMenu)abstractContainerMenu;
-            extendedPatternProviderMenu.returnMaterial();
-        }
-    }
+   private static void handleReturnMaterial(ServerboundReturnMaterialPayload var0, IPayloadContext var1) {
+      Player var3 = var1.player();
+      if (var3 instanceof ServerPlayer) {
+         AbstractContainerMenu var2 = var3.containerMenu;
+         if (var3.containerMenu instanceof HatchPatternProviderMenu) {
+            HatchPatternProviderMenu var6 = (HatchPatternProviderMenu)var2;
+            var6.returnMaterial();
+            return;
+         }
+      }
+
+      if (var3 instanceof ServerPlayer && var3.containerMenu instanceof ExtendedPatternProviderMenu var4) {
+         var4.returnMaterial();
+      }
+   }
 }
-

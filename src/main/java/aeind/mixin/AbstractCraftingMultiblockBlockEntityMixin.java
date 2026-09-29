@@ -1,18 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  aztech.modern_industrialization.machines.MachineBlockEntity
- *  aztech.modern_industrialization.machines.blockentities.multiblocks.AbstractCraftingMultiblockBlockEntity
- *  aztech.modern_industrialization.machines.components.CrafterComponent
- *  aztech.modern_industrialization.machines.multiblocks.ShapeMatcher
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Unique
- *  org.spongepowered.asm.mixin.injection.At
- *  org.spongepowered.asm.mixin.injection.Inject
- *  org.spongepowered.asm.mixin.injection.Redirect
- *  org.spongepowered.asm.mixin.injection.callback.CallbackInfo
- */
 package aeind.mixin;
 
 import aztech.modern_industrialization.machines.MachineBlockEntity;
@@ -23,7 +8,6 @@ import aeind.cross_thread.CrossThreadControllerAccess;
 import aeind.cross_thread.CrossThreadRecipeManager;
 import aeind.isolation.OverdriveBlocker;
 import aeind.isolation.ThreadIsolationAccess;
-import aeind.mixin.CrafterComponentAccessor;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -31,60 +15,64 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(value={AbstractCraftingMultiblockBlockEntity.class})
-public abstract class AbstractCraftingMultiblockBlockEntityMixin
-implements CrossThreadControllerAccess {
-    @Unique
-    private final CrossThreadRecipeManager aeind$crossThreadManager = new CrossThreadRecipeManager();
+@Mixin(AbstractCraftingMultiblockBlockEntity.class)
+public abstract class AbstractCraftingMultiblockBlockEntityMixin implements CrossThreadControllerAccess {
+   @Unique
+   private final CrossThreadRecipeManager aeind$crossThreadManager = new CrossThreadRecipeManager();
 
-    @Override
-    public CrossThreadRecipeManager aeind$getCrossThreadManager() {
-        return this.aeind$crossThreadManager;
-    }
+   @Override
+   public CrossThreadRecipeManager aeind$getCrossThreadManager() {
+      return this.aeind$crossThreadManager;
+   }
 
-    @Redirect(method={"tick"}, at=@At(value="INVOKE", target="Laztech/modern_industrialization/machines/components/CrafterComponent;tickRecipe()Z", remap=false))
-    private boolean aeind$tickCrossThreadRecipes(CrafterComponent crafterComponent) {
-        Object object = crafterComponent.getInventory();
-        if (!(object instanceof ThreadIsolationAccess)) {
-            return crafterComponent.tickRecipe();
-        }
-        ThreadIsolationAccess threadIsolationAccess = (ThreadIsolationAccess)object;
-        if (threadIsolationAccess.aeind$crossThreadEnabled()) {
-            object = (CrafterComponentAccessor)crafterComponent;
-            if (!this.aeind$crossThreadManager.hasWork() && object.aeind$getUsedEnergy() > 0L) {
-                return crafterComponent.tickRecipe();
+   @Redirect(
+      method = "tick",
+      at = @At(value = "INVOKE", target = "Laztech/modern_industrialization/machines/components/CrafterComponent;tickRecipe()Z", remap = false)
+   )
+   private boolean aeind$tickCrossThreadRecipes(CrafterComponent var1) {
+      if (var1.getInventory() instanceof ThreadIsolationAccess var2) {
+         if (var2.aeind$crossThreadEnabled()) {
+            CrafterComponentAccessor var4 = (CrafterComponentAccessor)var1;
+            if (!this.aeind$crossThreadManager.hasWork() && var4.aeind$getUsedEnergy() > 0L) {
+               return var1.tickRecipe();
             }
-            if (object.aeind$getUsedEnergy() == 0L) {
-                AbstractCraftingMultiblockBlockEntityMixin.aeind$resetIdleLegacyCrafter((CrafterComponentAccessor)object);
-            }
-            return this.aeind$crossThreadManager.tick((MachineBlockEntity)this, crafterComponent, threadIsolationAccess, true);
-        }
-        if (this.aeind$crossThreadManager.hasWork()) {
-            return this.aeind$crossThreadManager.tick((MachineBlockEntity)this, crafterComponent, threadIsolationAccess, false);
-        }
-        return crafterComponent.tickRecipe();
-    }
 
-    @Inject(method={"onRematch"}, at={@At(value="TAIL")})
-    private void aeind$clearOverdriveWhenIsolated(ShapeMatcher shapeMatcher, CallbackInfo callbackInfo) {
-        MachineBlockEntity machineBlockEntity;
-        if (shapeMatcher.isMatchSuccessful() && OverdriveBlocker.isBlocked(machineBlockEntity = (MachineBlockEntity)this) && OverdriveBlocker.clear(machineBlockEntity)) {
-            machineBlockEntity.setChanged();
-            if (!machineBlockEntity.getLevel().isClientSide()) {
-                machineBlockEntity.sync();
+            if (var4.aeind$getUsedEnergy() == 0L) {
+               aeind$resetIdleLegacyCrafter(var4);
             }
-        }
-    }
 
-    @Unique
-    private static void aeind$resetIdleLegacyCrafter(CrafterComponentAccessor crafterComponentAccessor) {
-        crafterComponentAccessor.aeind$setActiveRecipe(null);
-        crafterComponentAccessor.aeind$setDelayedActiveRecipe(null);
-        crafterComponentAccessor.aeind$setUsedEnergy(0L);
-        crafterComponentAccessor.aeind$setRecipeEnergy(0L);
-        crafterComponentAccessor.aeind$setRecipeMaxEu(0L);
-        crafterComponentAccessor.aeind$setEfficiencyTicks(0);
-        crafterComponentAccessor.aeind$setMaxEfficiencyTicks(0);
-    }
+            return this.aeind$crossThreadManager.tick((MachineBlockEntity)(Object)this, var1, var2, true);
+         } else {
+            return this.aeind$crossThreadManager.hasWork()
+               ? this.aeind$crossThreadManager.tick((MachineBlockEntity)(Object)this, var1, var2, false)
+               : var1.tickRecipe();
+         }
+      } else {
+         return var1.tickRecipe();
+      }
+   }
+
+   @Inject(method = "onRematch", at = @At("TAIL"))
+   private void aeind$clearOverdriveWhenIsolated(ShapeMatcher var1, CallbackInfo var2) {
+      if (var1.isMatchSuccessful()) {
+         MachineBlockEntity var3 = (MachineBlockEntity)(Object)this;
+         if (OverdriveBlocker.isBlocked(var3) && OverdriveBlocker.clear(var3)) {
+            var3.setChanged();
+            if (!var3.getLevel().isClientSide()) {
+               var3.sync();
+            }
+         }
+      }
+   }
+
+   @Unique
+   private static void aeind$resetIdleLegacyCrafter(CrafterComponentAccessor var0) {
+      var0.aeind$setActiveRecipe(null);
+      var0.aeind$setDelayedActiveRecipe(null);
+      var0.aeind$setUsedEnergy(0L);
+      var0.aeind$setRecipeEnergy(0L);
+      var0.aeind$setRecipeMaxEu(0L);
+      var0.aeind$setEfficiencyTicks(0);
+      var0.aeind$setMaxEfficiencyTicks(0);
+   }
 }
-

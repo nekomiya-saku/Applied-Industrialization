@@ -106,7 +106,7 @@ IActionHost {
     public static final int BUFFER_FLUID_TANKS = 36;
     public static final long FLUID_CAPACITY = Long.MAX_VALUE;
     public static final int TICK_RATE = 1;
-    private final IManagedGridNode mainNode = GridHelper.createManagedNode((Object)((Object)this), NODE_LISTENER).setVisualRepresentation(new ItemStack((ItemLike)ModBlocks.ME_OUTPUT_HATCH.get())).setInWorldNode(true).setTagName("me_output_hatch_node").setFlags(new GridFlags[]{GridFlags.REQUIRE_CHANNEL}).setExposedOnSides(EnumSet.allOf(Direction.class));
+    private final IManagedGridNode mainNode = GridHelper.createManagedNode(this, NODE_LISTENER).setVisualRepresentation(new ItemStack(ModBlocks.ME_OUTPUT_HATCH.get())).setInWorldNode(true).setTagName("me_output_hatch_node").setFlags(GridFlags.REQUIRE_CHANNEL).setExposedOnSides(EnumSet.allOf(Direction.class));
     private final MIInventory bufferInventory;
     private final AEKeyLongStorage outputBuffer = new AEKeyLongStorage(this::setChanged);
     private final MachineComponent persistentData = new MachineComponent(){
@@ -158,7 +158,7 @@ IActionHost {
 
     public void clearRemoved() {
         super.clearRemoved();
-        GridHelper.onFirstTick((BlockEntity)this, mEOutputHatchBlockEntity -> {
+        GridHelper.onFirstTick(this, mEOutputHatchBlockEntity -> {
             if (mEOutputHatchBlockEntity.getLevel() == null || mEOutputHatchBlockEntity.isRemoved()) {
                 return;
             }

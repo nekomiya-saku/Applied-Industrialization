@@ -1,30 +1,9 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  appeng.api.config.Actionable
- *  appeng.api.config.LockCraftingMode
- *  appeng.api.crafting.IPatternDetails
- *  appeng.api.crafting.IPatternDetails$IInput
- *  appeng.api.networking.IManagedGridNode
- *  appeng.api.networking.crafting.ICraftingProvider
- *  appeng.api.stacks.AEKey
- *  appeng.api.stacks.GenericStack
- *  appeng.api.stacks.KeyCounter
- *  appeng.helpers.patternprovider.PatternProviderLogic
- *  appeng.helpers.patternprovider.PatternProviderLogicHost
- *  appeng.util.inv.AppEngInternalInventory
- *  it.unimi.dsi.fastutil.objects.Object2LongMap$Entry
- *  net.minecraft.core.HolderLookup$Provider
- *  net.minecraft.nbt.CompoundTag
- *  net.minecraft.nbt.ListTag
- *  net.minecraft.nbt.Tag
- */
 package aeind.blockentity;
 
 import appeng.api.config.Actionable;
 import appeng.api.config.LockCraftingMode;
 import appeng.api.crafting.IPatternDetails;
+import appeng.api.crafting.IPatternDetails.IInput;
 import appeng.api.networking.IManagedGridNode;
 import appeng.api.networking.crafting.ICraftingProvider;
 import appeng.api.stacks.AEKey;
@@ -33,8 +12,7 @@ import appeng.api.stacks.KeyCounter;
 import appeng.helpers.patternprovider.PatternProviderLogic;
 import appeng.helpers.patternprovider.PatternProviderLogicHost;
 import appeng.util.inv.AppEngInternalInventory;
-import aeind.blockentity.PatternInputHatchHost;
-import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongMap.Entry;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -44,132 +22,153 @@ import java.util.Set;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 
-public class HatchPatternProviderLogic
-extends PatternProviderLogic {
-    private static final String NBT_BUFFER_SEND_LIST = "bufferSendList";
-    protected final PatternInputHatchHost host;
-    private final List<GenericStack> bufferSendList = new ArrayList<GenericStack>();
+public class HatchPatternProviderLogic extends PatternProviderLogic {
+   private static final String NBT_BUFFER_SEND_LIST = "bufferSendList";
+   protected final PatternInputHatchHost host;
+   private final List<GenericStack> bufferSendList = new ArrayList<>();
 
-    public HatchPatternProviderLogic(IManagedGridNode iManagedGridNode, PatternInputHatchHost patternInputHatchHost) {
-        super(iManagedGridNode, (PatternProviderLogicHost)patternInputHatchHost, 9);
-        this.host = patternInputHatchHost;
-    }
+   public HatchPatternProviderLogic(IManagedGridNode var1, PatternInputHatchHost var2) {
+      super(var1, (PatternProviderLogicHost)var2, 9);
+      this.host = var2;
+   }
 
-    public boolean pushPattern(IPatternDetails iPatternDetails, KeyCounter[] keyCounterArray) {
-        if (!(this.bufferSendList.isEmpty() && this.host.getMainNode().isActive() && this.getAvailablePatterns().contains(iPatternDetails))) {
-            return false;
-        }
-        if (this.getCraftingLockedReason() != LockCraftingMode.NONE || !this.host.canAcceptOrder()) {
-            return false;
-        }
-        if (!this.canAcceptAllInputs(keyCounterArray)) {
-            return false;
-        }
-        iPatternDetails.pushInputsToExternalInventory(keyCounterArray, (aEKey, l) -> {
-            long l2 = this.host.insertBuffer(aEKey, l, Actionable.MODULATE);
-            if (l2 < l) {
-                this.bufferSendList.add(new GenericStack(aEKey, l - l2));
+   @Override
+   public boolean pushPattern(IPatternDetails var1, KeyCounter[] var2) {
+      if (!this.bufferSendList.isEmpty() || !this.host.getMainNode().isActive() || !this.getAvailablePatterns().contains(var1)) {
+         return false;
+      }
+
+      if (this.getCraftingLockedReason() != LockCraftingMode.NONE || !this.host.canAcceptOrder()) {
+         return false;
+      }
+
+      if (!this.canAcceptAllInputs(var2)) {
+         return false;
+      }
+
+      var1.pushInputsToExternalInventory(var2, (var1x, var2x) -> {
+         long var4 = this.host.insertBuffer(var1x, var2x, Actionable.MODULATE);
+         if (var4 < var2x) {
+            this.bufferSendList.add(new GenericStack(var1x, var2x - var4));
+         }
+      });
+      this.host.saveChanges();
+      return true;
+   }
+
+   @Override
+   public boolean isBusy() {
+      return !this.bufferSendList.isEmpty();
+   }
+
+   private boolean canAcceptAllInputs(KeyCounter[] var1) {
+      KeyCounter[] var2 = var1;
+      int var3 = var2.length;
+
+      for (int var4 = 0; var4 < var3; var4++) {
+         for (Entry var7 : var2[var4]) {
+            AEKey var8 = (AEKey)var7.getKey();
+            long var9 = var7.getLongValue();
+            if (var9 > 0L && this.host.insertBuffer(var8, var9, Actionable.SIMULATE) < var9) {
+               return false;
             }
-        });
-        this.host.saveChanges();
-        return true;
-    }
+         }
+      }
 
-    public boolean isBusy() {
-        return !this.bufferSendList.isEmpty();
-    }
+      return true;
+   }
 
-    private boolean canAcceptAllInputs(KeyCounter[] keyCounterArray) {
-        for (KeyCounter keyCounter : keyCounterArray) {
-            for (Object2LongMap.Entry entry : keyCounter) {
-                AEKey aEKey = (AEKey)entry.getKey();
-                long l = entry.getLongValue();
-                if (l <= 0L || this.host.insertBuffer(aEKey, l, Actionable.SIMULATE) >= l) continue;
-                return false;
+   public boolean flushBufferSendList() {
+      if (this.bufferSendList.isEmpty()) {
+         return false;
+      }
+
+      boolean var1 = false;
+      ListIterator<GenericStack> var2 = this.bufferSendList.listIterator();
+
+      while (var2.hasNext()) {
+         GenericStack var3 = var2.next();
+         long var4 = this.host.insertBuffer(var3.what(), var3.amount(), Actionable.MODULATE);
+         if (var4 > 0L) {
+            var1 = true;
+         }
+
+         if (var4 >= var3.amount()) {
+            var2.remove();
+         } else if (var4 > 0L) {
+            var2.set(new GenericStack(var3.what(), var3.amount() - var4));
+         }
+      }
+
+      if (this.bufferSendList.isEmpty()) {
+         ICraftingProvider.requestUpdate(this.host.getMainNode());
+      }
+
+      return var1;
+   }
+
+   public Set<AEKey> getPatternInputKeys() {
+      HashSet<AEKey> var1 = new HashSet<>();
+
+      for (IPatternDetails var3 : this.getAvailablePatterns()) {
+         for (IInput var7 : var3.getInputs()) {
+            for (GenericStack var11 : var7.getPossibleInputs()) {
+               var1.add(var11.what().dropSecondary());
             }
-        }
-        return true;
-    }
+         }
+      }
 
-    public boolean flushBufferSendList() {
-        if (this.bufferSendList.isEmpty()) {
-            return false;
-        }
-        boolean bl = false;
-        ListIterator<GenericStack> listIterator = this.bufferSendList.listIterator();
-        while (listIterator.hasNext()) {
-            GenericStack genericStack = listIterator.next();
-            long l = this.host.insertBuffer(genericStack.what(), genericStack.amount(), Actionable.MODULATE);
-            if (l > 0L) {
-                bl = true;
+      return var1;
+   }
+
+   @Override
+   public void onChangeInventory(AppEngInternalInventory var1, int var2) {
+      super.onChangeInventory(var1, var2);
+      this.host.returnUnusedBufferToNetwork();
+      this.pruneBufferSendList();
+   }
+
+   private void pruneBufferSendList() {
+      if (!this.bufferSendList.isEmpty()) {
+         Set var1 = this.getPatternInputKeys();
+         Iterator var2 = this.bufferSendList.iterator();
+
+         while (var2.hasNext()) {
+            GenericStack var3 = (GenericStack)var2.next();
+            if (!var1.contains(var3.what().dropSecondary())) {
+               var2.remove();
+               this.host.returnToNetwork(var3.what(), var3.amount());
             }
-            if (l >= genericStack.amount()) {
-                listIterator.remove();
-                continue;
+         }
+      }
+   }
+
+   @Override
+   public void writeToNBT(CompoundTag var1, HolderLookup.Provider var2) {
+      super.writeToNBT(var1, var2);
+      ListTag var3 = new ListTag();
+
+      for (GenericStack var5 : this.bufferSendList) {
+         var3.add(GenericStack.writeTag(var2, var5));
+      }
+
+      var1.put("bufferSendList", var3);
+   }
+
+   @Override
+   public void readFromNBT(CompoundTag var1, HolderLookup.Provider var2) {
+      super.readFromNBT(var1, var2);
+      this.bufferSendList.clear();
+      if (var1.contains("bufferSendList")) {
+         ListTag var3 = var1.getList("bufferSendList", 10);
+
+         for (int var4 = 0; var4 < var3.size(); var4++) {
+            GenericStack var5 = GenericStack.readTag(var2, var3.getCompound(var4));
+            if (var5 != null) {
+               this.bufferSendList.add(var5);
             }
-            if (l <= 0L) continue;
-            listIterator.set(new GenericStack(genericStack.what(), genericStack.amount() - l));
-        }
-        if (this.bufferSendList.isEmpty()) {
-            ICraftingProvider.requestUpdate((IManagedGridNode)this.host.getMainNode());
-        }
-        return bl;
-    }
-
-    public Set<AEKey> getPatternInputKeys() {
-        HashSet<AEKey> hashSet = new HashSet<AEKey>();
-        for (IPatternDetails iPatternDetails : this.getAvailablePatterns()) {
-            for (IPatternDetails.IInput iInput : iPatternDetails.getInputs()) {
-                for (GenericStack genericStack : iInput.getPossibleInputs()) {
-                    hashSet.add(genericStack.what().dropSecondary());
-                }
-            }
-        }
-        return hashSet;
-    }
-
-    public void onChangeInventory(AppEngInternalInventory appEngInternalInventory, int n) {
-        super.onChangeInventory(appEngInternalInventory, n);
-        this.host.returnUnusedBufferToNetwork();
-        this.pruneBufferSendList();
-    }
-
-    private void pruneBufferSendList() {
-        if (this.bufferSendList.isEmpty()) {
-            return;
-        }
-        Set<AEKey> set = this.getPatternInputKeys();
-        Iterator<GenericStack> iterator = this.bufferSendList.iterator();
-        while (iterator.hasNext()) {
-            GenericStack genericStack = iterator.next();
-            if (set.contains(genericStack.what().dropSecondary())) continue;
-            iterator.remove();
-            this.host.returnToNetwork(genericStack.what(), genericStack.amount());
-        }
-    }
-
-    public void writeToNBT(CompoundTag compoundTag, HolderLookup.Provider provider) {
-        super.writeToNBT(compoundTag, provider);
-        ListTag listTag = new ListTag();
-        for (GenericStack genericStack : this.bufferSendList) {
-            listTag.add((Object)GenericStack.writeTag((HolderLookup.Provider)provider, (GenericStack)genericStack));
-        }
-        compoundTag.put(NBT_BUFFER_SEND_LIST, (Tag)listTag);
-    }
-
-    public void readFromNBT(CompoundTag compoundTag, HolderLookup.Provider provider) {
-        super.readFromNBT(compoundTag, provider);
-        this.bufferSendList.clear();
-        if (compoundTag.contains(NBT_BUFFER_SEND_LIST)) {
-            ListTag listTag = compoundTag.getList(NBT_BUFFER_SEND_LIST, 10);
-            for (int i = 0; i < listTag.size(); ++i) {
-                GenericStack genericStack = GenericStack.readTag((HolderLookup.Provider)provider, (CompoundTag)listTag.getCompound(i));
-                if (genericStack == null) continue;
-                this.bufferSendList.add(genericStack);
-            }
-        }
-    }
+         }
+      }
+   }
 }
-

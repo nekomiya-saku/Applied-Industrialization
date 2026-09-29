@@ -1,18 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  aztech.modern_industrialization.inventory.ConfigurableFluidStack
- *  aztech.modern_industrialization.inventory.ConfigurableItemStack
- *  aztech.modern_industrialization.machines.components.MultiblockInventoryComponent
- *  aztech.modern_industrialization.machines.multiblocks.HatchBlockEntity
- *  aztech.modern_industrialization.machines.multiblocks.ShapeMatcher
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.injection.At
- *  org.spongepowered.asm.mixin.injection.Inject
- *  org.spongepowered.asm.mixin.injection.callback.CallbackInfo
- *  org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable
- */
 package aeind.mixin;
 
 import aztech.modern_industrialization.inventory.ConfigurableFluidStack;
@@ -27,7 +12,6 @@ import aeind.isolation.ThreadIsolationHatch;
 import aeind.isolation.ThreadIsolationRoom;
 import aeind.isolation.ThreadIsolationState;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import org.spongepowered.asm.mixin.Mixin;
@@ -36,96 +20,101 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(value={MultiblockInventoryComponent.class})
-public abstract class MultiblockInventoryComponentMixin
-implements ThreadIsolationAccess {
-    private boolean aeind$isolationEnabled;
-    private boolean aeind$crossThreadEnabled;
-    private boolean aeind$overdriveBlocked;
-    private int aeind$maxParallelPerThread = 1;
-    private List<ThreadIsolationRoom> aeind$rooms = List.of();
+@Mixin(MultiblockInventoryComponent.class)
+public abstract class MultiblockInventoryComponentMixin implements ThreadIsolationAccess {
+   private boolean aeind$isolationEnabled;
+   private boolean aeind$crossThreadEnabled;
+   private boolean aeind$overdriveBlocked;
+   private int aeind$maxParallelPerThread = 1;
+   private List<ThreadIsolationRoom> aeind$rooms = List.of();
 
-    @Inject(method={"rebuild"}, at={@At(value="RETURN")})
-    private void aeind$rebuildRooms(ShapeMatcher shapeMatcher, CallbackInfo callbackInfo) {
-        List list = shapeMatcher.getMatchedHatches();
-        boolean bl = list.stream().anyMatch(hatchBlockEntity -> hatchBlockEntity instanceof ThreadIsolationHatch);
-        boolean bl2 = list.stream().anyMatch(hatchBlockEntity -> hatchBlockEntity instanceof IsolatedInputProvider);
-        this.aeind$crossThreadEnabled = list.stream().anyMatch(hatchBlockEntity -> hatchBlockEntity instanceof CrossThreadParallelHatch);
-        this.aeind$overdriveBlocked = bl || bl2 || this.aeind$crossThreadEnabled;
-        this.aeind$maxParallelPerThread = list.stream().filter(CrossThreadParallelHatch.class::isInstance).map(CrossThreadParallelHatch.class::cast).mapToInt(CrossThreadParallelHatch::aeind$maxParallelPerThread).max().orElse(1);
-        boolean bl3 = this.aeind$isolationEnabled = bl || bl2;
-        if (!this.aeind$isolationEnabled) {
-            this.aeind$rooms = List.of();
-            this.aeind$overdriveBlocked = false;
-            return;
-        }
-        ArrayList<ThreadIsolationRoom> arrayList = new ArrayList<ThreadIsolationRoom>(list.size());
-        ArrayList<ConfigurableItemStack> arrayList2 = new ArrayList<ConfigurableItemStack>();
-        ArrayList<ConfigurableFluidStack> arrayList3 = new ArrayList<ConfigurableFluidStack>();
-        for (HatchBlockEntity hatchBlockEntity2 : list) {
-            Object object;
-            if (hatchBlockEntity2 instanceof IsolatedInputProvider) {
-                object = (IsolatedInputProvider)hatchBlockEntity2;
-                arrayList.addAll(object.aeind$isolatedInputRooms());
-                continue;
+   @Inject(method = "rebuild", at = @At("RETURN"))
+   private void aeind$rebuildRooms(ShapeMatcher var1, CallbackInfo var2) {
+      List<HatchBlockEntity> var3 = var1.getMatchedHatches();
+      boolean var4 = var3.stream().anyMatch(var0 -> var0 instanceof ThreadIsolationHatch);
+      boolean var5 = var3.stream().anyMatch(var0 -> var0 instanceof IsolatedInputProvider);
+      this.aeind$crossThreadEnabled = var3.stream().anyMatch(var0 -> var0 instanceof CrossThreadParallelHatch);
+      this.aeind$overdriveBlocked = var4 || var5 || this.aeind$crossThreadEnabled;
+      this.aeind$maxParallelPerThread = var3.stream()
+         .filter(CrossThreadParallelHatch.class::isInstance)
+         .map(CrossThreadParallelHatch.class::cast)
+         .mapToInt(CrossThreadParallelHatch::aeind$maxParallelPerThread)
+         .max()
+         .orElse(1);
+      this.aeind$isolationEnabled = var4 || var5;
+      if (!this.aeind$isolationEnabled) {
+         this.aeind$rooms = List.of();
+         this.aeind$overdriveBlocked = false;
+      } else {
+         ArrayList<ThreadIsolationRoom> var6 = new ArrayList<>(var3.size());
+         ArrayList<ConfigurableItemStack> var7 = new ArrayList<>();
+         ArrayList<ConfigurableFluidStack> var8 = new ArrayList<>();
+
+         for (HatchBlockEntity var10 : var3) {
+            if (var10 instanceof IsolatedInputProvider var13) {
+               var6.addAll(var13.aeind$isolatedInputRooms());
+            } else {
+               ArrayList<ConfigurableItemStack> var11 = new ArrayList<>();
+               ArrayList<ConfigurableFluidStack> var12 = new ArrayList<>();
+               var10.appendItemInputs(var11);
+               var10.appendFluidInputs(var12);
+               if (var4) {
+                  if (!var11.isEmpty() || !var12.isEmpty()) {
+                     var6.add(new ThreadIsolationRoom("hatch:" + var10.getBlockPos().asLong(), var11, var12));
+                  }
+               } else {
+                  var7.addAll(var11);
+                  var8.addAll(var12);
+               }
             }
-            object = new ArrayList();
-            ArrayList<ConfigurableFluidStack> arrayList4 = new ArrayList<ConfigurableFluidStack>();
-            hatchBlockEntity2.appendItemInputs((List)object);
-            hatchBlockEntity2.appendFluidInputs(arrayList4);
-            if (bl) {
-                if (object.isEmpty() && arrayList4.isEmpty()) continue;
-                arrayList.add(new ThreadIsolationRoom("hatch:" + hatchBlockEntity2.getBlockPos().asLong(), (List<ConfigurableItemStack>)object, arrayList4));
-                continue;
-            }
-            arrayList2.addAll((Collection<ConfigurableItemStack>)object);
-            arrayList3.addAll(arrayList4);
-        }
-        if (!(bl || arrayList2.isEmpty() && arrayList3.isEmpty())) {
-            arrayList.add(new ThreadIsolationRoom("ordinary", arrayList2, arrayList3));
-        }
-        this.aeind$rooms = List.copyOf(arrayList);
-    }
+         }
 
-    @Inject(method={"getItemInputs"}, at={@At(value="RETURN")}, cancellable=true)
-    private void aeind$activeItemInputs(CallbackInfoReturnable<List<ConfigurableItemStack>> callbackInfoReturnable) {
-        ThreadIsolationRoom threadIsolationRoom = ThreadIsolationState.get();
-        if (threadIsolationRoom != null) {
-            callbackInfoReturnable.setReturnValue(threadIsolationRoom.itemInputs());
-        }
-    }
+         if (!var4 && (!var7.isEmpty() || !var8.isEmpty())) {
+            var6.add(new ThreadIsolationRoom("ordinary", var7, var8));
+         }
 
-    @Inject(method={"getFluidInputs"}, at={@At(value="RETURN")}, cancellable=true)
-    private void aeind$activeFluidInputs(CallbackInfoReturnable<List<ConfigurableFluidStack>> callbackInfoReturnable) {
-        ThreadIsolationRoom threadIsolationRoom = ThreadIsolationState.get();
-        if (threadIsolationRoom != null) {
-            callbackInfoReturnable.setReturnValue(threadIsolationRoom.fluidInputs());
-        }
-    }
+         this.aeind$rooms = List.copyOf(var6);
+      }
+   }
 
-    @Override
-    public boolean aeind$isolationEnabled() {
-        return this.aeind$isolationEnabled;
-    }
+   @Inject(method = "getItemInputs", at = @At("RETURN"), cancellable = true)
+   private void aeind$activeItemInputs(CallbackInfoReturnable<List<ConfigurableItemStack>> var1) {
+      ThreadIsolationRoom var2 = ThreadIsolationState.get();
+      if (var2 != null) {
+         var1.setReturnValue(var2.itemInputs());
+      }
+   }
 
-    @Override
-    public List<ThreadIsolationRoom> aeind$isolationRooms() {
-        return Collections.unmodifiableList(this.aeind$rooms);
-    }
+   @Inject(method = "getFluidInputs", at = @At("RETURN"), cancellable = true)
+   private void aeind$activeFluidInputs(CallbackInfoReturnable<List<ConfigurableFluidStack>> var1) {
+      ThreadIsolationRoom var2 = ThreadIsolationState.get();
+      if (var2 != null) {
+         var1.setReturnValue(var2.fluidInputs());
+      }
+   }
 
-    @Override
-    public boolean aeind$crossThreadEnabled() {
-        return this.aeind$crossThreadEnabled;
-    }
+   @Override
+   public boolean aeind$isolationEnabled() {
+      return this.aeind$isolationEnabled;
+   }
 
-    @Override
-    public int aeind$maxParallelPerThread() {
-        return this.aeind$maxParallelPerThread;
-    }
+   @Override
+   public List<ThreadIsolationRoom> aeind$isolationRooms() {
+      return Collections.unmodifiableList(this.aeind$rooms);
+   }
 
-    @Override
-    public boolean aeind$overdriveBlocked() {
-        return this.aeind$overdriveBlocked;
-    }
+   @Override
+   public boolean aeind$crossThreadEnabled() {
+      return this.aeind$crossThreadEnabled;
+   }
+
+   @Override
+   public int aeind$maxParallelPerThread() {
+      return this.aeind$maxParallelPerThread;
+   }
+
+   @Override
+   public boolean aeind$overdriveBlocked() {
+      return this.aeind$overdriveBlocked;
+   }
 }
-

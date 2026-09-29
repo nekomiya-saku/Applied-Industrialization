@@ -1,15 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.minecraft.core.HolderLookup$Provider
- *  net.minecraft.data.PackOutput
- *  net.minecraft.data.tags.ItemTagsProvider
- *  net.minecraft.data.tags.TagsProvider$TagLookup
- *  net.minecraft.world.level.block.Block
- *  net.neoforged.neoforge.common.data.ExistingFileHelper
- *  org.jetbrains.annotations.Nullable
- */
 package aeind.datagen;
 
 import java.util.concurrent.CompletableFuture;
@@ -21,13 +9,14 @@ import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.common.data.ExistingFileHelper;
 import org.jetbrains.annotations.Nullable;
 
-public class ModItemTagsProvider
-extends ItemTagsProvider {
-    public ModItemTagsProvider(PackOutput packOutput, CompletableFuture<HolderLookup.Provider> completableFuture, CompletableFuture<TagsProvider.TagLookup<Block>> completableFuture2, @Nullable ExistingFileHelper existingFileHelper) {
-        super(packOutput, completableFuture, completableFuture2, "aeind", existingFileHelper);
-    }
+public class ModItemTagsProvider extends ItemTagsProvider {
+   public ModItemTagsProvider(
+      PackOutput var1, CompletableFuture<HolderLookup.Provider> var2, CompletableFuture<TagsProvider.TagLookup<Block>> var3, @Nullable ExistingFileHelper var4
+   ) {
+      super(var1, var2, var3, "aeind", var4);
+   }
 
-    protected void addTags(HolderLookup.Provider provider) {
-    }
+   @Override
+   protected void addTags(HolderLookup.Provider var1) {
+   }
 }
-

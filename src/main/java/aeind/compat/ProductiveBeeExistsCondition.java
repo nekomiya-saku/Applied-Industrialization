@@ -1,24 +1,5 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.mojang.datafixers.kinds.App
- *  com.mojang.datafixers.kinds.Applicative
- *  com.mojang.serialization.MapCodec
- *  com.mojang.serialization.codecs.RecordCodecBuilder
- *  net.minecraft.resources.ResourceLocation
- *  net.neoforged.bus.api.SubscribeEvent
- *  net.neoforged.fml.common.EventBusSubscriber
- *  net.neoforged.fml.common.EventBusSubscriber$Bus
- *  net.neoforged.neoforge.common.conditions.ICondition
- *  net.neoforged.neoforge.common.conditions.ICondition$IContext
- *  net.neoforged.neoforge.registries.NeoForgeRegistries$Keys
- *  net.neoforged.neoforge.registries.RegisterEvent
- */
 package aeind.compat;
 
-import com.mojang.datafixers.kinds.App;
-import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceLocation;
@@ -28,30 +9,35 @@ import net.neoforged.neoforge.common.conditions.ICondition;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import net.neoforged.neoforge.registries.RegisterEvent;
 
-@EventBusSubscriber(modid="aeind", bus=EventBusSubscriber.Bus.MOD)
-public record ProductiveBeeExistsCondition(ResourceLocation bee) implements ICondition
-{
-    public static final MapCodec<ProductiveBeeExistsCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group((App)ResourceLocation.CODEC.fieldOf("bee").forGetter(ProductiveBeeExistsCondition::bee)).apply((Applicative)instance, ProductiveBeeExistsCondition::new));
+@EventBusSubscriber(modid = "aeind")
+public record ProductiveBeeExistsCondition(ResourceLocation bee) implements ICondition {
+   public static final MapCodec<ProductiveBeeExistsCondition> CODEC = RecordCodecBuilder.mapCodec(
+      var0 -> var0.group(ResourceLocation.CODEC.fieldOf("bee").forGetter(ProductiveBeeExistsCondition::bee)).apply(var0, ProductiveBeeExistsCondition::new)
+   );
 
-    @SubscribeEvent
-    public static void register(RegisterEvent registerEvent) {
-        registerEvent.register(NeoForgeRegistries.Keys.CONDITION_CODECS, registerHelper -> registerHelper.register(ResourceLocation.fromNamespaceAndPath((String)"aeind", (String)"productive_bee_exists"), CODEC));
-    }
+   @SubscribeEvent
+   public static void register(RegisterEvent var0) {
+      var0.register(
+         NeoForgeRegistries.Keys.CONDITION_CODECS, var0x -> var0x.register(ResourceLocation.fromNamespaceAndPath("aeind", "productive_bee_exists"), CODEC)
+      );
+   }
 
-    public boolean test(ICondition.IContext iContext) {
-        try {
-            ICondition iCondition;
-            Class<?> clazz = Class.forName("cy.jdkdigital.productivebees.common.crafting.conditions.BeeExistsCondition", false, ProductiveBeeExistsCondition.class.getClassLoader());
-            Object obj = clazz.getConstructor(ResourceLocation.class).newInstance(this.bee);
-            return obj instanceof ICondition && (iCondition = (ICondition)obj).test(iContext);
-        }
-        catch (LinkageError | ReflectiveOperationException throwable) {
-            return false;
-        }
-    }
+   @Override
+   public boolean test(ICondition.IContext var1) {
+      try {
+         Class<?> var3 = Class.forName(
+            "cy.jdkdigital.productivebees.common.crafting.conditions.BeeExistsCondition", false, ProductiveBeeExistsCondition.class.getClassLoader()
+         );
+         Object var4 = var3.getConstructor(ResourceLocation.class).newInstance(this.bee);
+         ICondition var2;
+         return var4 instanceof ICondition && (var2 = (ICondition)var4).test(var1);
+      } catch (LinkageError | ReflectiveOperationException var5) {
+         return false;
+      }
+   }
 
-    public MapCodec<? extends ICondition> codec() {
-        return CODEC;
-    }
+   @Override
+   public MapCodec<? extends ICondition> codec() {
+      return CODEC;
+   }
 }
-

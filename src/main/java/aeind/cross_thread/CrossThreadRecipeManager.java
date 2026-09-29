@@ -1,36 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  aztech.modern_industrialization.inventory.AbstractConfigurableStack
- *  aztech.modern_industrialization.inventory.ConfigurableFluidStack
- *  aztech.modern_industrialization.inventory.ConfigurableItemStack
- *  aztech.modern_industrialization.machines.MachineBlockEntity
- *  aztech.modern_industrialization.machines.components.CrafterComponent
- *  aztech.modern_industrialization.machines.components.CrafterComponent$Behavior
- *  aztech.modern_industrialization.machines.components.CrafterComponent$Inventory
- *  aztech.modern_industrialization.machines.recipe.MachineRecipe
- *  aztech.modern_industrialization.machines.recipe.MachineRecipe$FluidInput
- *  aztech.modern_industrialization.machines.recipe.MachineRecipe$FluidOutput
- *  aztech.modern_industrialization.machines.recipe.MachineRecipe$ItemInput
- *  aztech.modern_industrialization.machines.recipe.MachineRecipe$ItemOutput
- *  aztech.modern_industrialization.machines.recipe.MachineRecipeType
- *  aztech.modern_industrialization.machines.recipe.condition.MachineProcessCondition$Context
- *  aztech.modern_industrialization.thirdparty.fabrictransfer.api.fluid.FluidVariant
- *  aztech.modern_industrialization.thirdparty.fabrictransfer.api.item.ItemVariant
- *  aztech.modern_industrialization.thirdparty.fabrictransfer.api.storage.TransferVariant
- *  aztech.modern_industrialization.util.Simulation
- *  net.minecraft.core.HolderLookup$Provider
- *  net.minecraft.nbt.CompoundTag
- *  net.minecraft.nbt.ListTag
- *  net.minecraft.nbt.Tag
- *  net.minecraft.resources.ResourceLocation
- *  net.minecraft.server.level.ServerLevel
- *  net.minecraft.world.item.crafting.RecipeHolder
- *  net.minecraft.world.level.ItemLike
- *  net.minecraft.world.level.Level
- *  net.minecraft.world.level.material.Fluid
- */
 package aeind.cross_thread;
 
 import aztech.modern_industrialization.inventory.AbstractConfigurableStack;
@@ -38,12 +5,16 @@ import aztech.modern_industrialization.inventory.ConfigurableFluidStack;
 import aztech.modern_industrialization.inventory.ConfigurableItemStack;
 import aztech.modern_industrialization.machines.MachineBlockEntity;
 import aztech.modern_industrialization.machines.components.CrafterComponent;
+import aztech.modern_industrialization.machines.components.CrafterComponent.Behavior;
+import aztech.modern_industrialization.machines.components.CrafterComponent.Inventory;
 import aztech.modern_industrialization.machines.recipe.MachineRecipe;
-import aztech.modern_industrialization.machines.recipe.MachineRecipeType;
-import aztech.modern_industrialization.machines.recipe.condition.MachineProcessCondition;
+import aztech.modern_industrialization.machines.recipe.MachineRecipe.FluidInput;
+import aztech.modern_industrialization.machines.recipe.MachineRecipe.FluidOutput;
+import aztech.modern_industrialization.machines.recipe.MachineRecipe.ItemInput;
+import aztech.modern_industrialization.machines.recipe.MachineRecipe.ItemOutput;
+import aztech.modern_industrialization.machines.recipe.condition.MachineProcessCondition.Context;
 import aztech.modern_industrialization.thirdparty.fabrictransfer.api.fluid.FluidVariant;
 import aztech.modern_industrialization.thirdparty.fabrictransfer.api.item.ItemVariant;
-import aztech.modern_industrialization.thirdparty.fabrictransfer.api.storage.TransferVariant;
 import aztech.modern_industrialization.util.Simulation;
 import aeind.compat.MIParallelHatchCompat;
 import aeind.isolation.ThreadIsolationAccess;
@@ -55,627 +26,754 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.Predicate;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.level.ItemLike;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.material.Fluid;
 
 public final class CrossThreadRecipeManager {
-    public static final String NBT_KEY = "aeindCrossThreadRecipes";
-    private static final int NBT_VERSION = 2;
-    private final Map<String, RecipeThreadState> states = new LinkedHashMap<String, RecipeThreadState>();
-    private int fairnessCursor;
+   public static final String NBT_KEY = "aeindCrossThreadRecipes";
+   private static final int NBT_VERSION = 2;
+   private final Map<String, CrossThreadRecipeManager.RecipeThreadState> states = new LinkedHashMap<>();
+   private int fairnessCursor;
 
-    public boolean hasWork() {
-        return this.states.values().stream().anyMatch(RecipeThreadState::hasWork);
-    }
+   public boolean hasWork() {
+      return this.states.values().stream().anyMatch(CrossThreadRecipeManager.RecipeThreadState::hasWork);
+   }
 
-    public int getActiveThreadCount() {
-        return (int)this.states.values().stream().filter(RecipeThreadState::isRunning).count();
-    }
+   public int getActiveThreadCount() {
+      return (int)this.states.values().stream().filter(CrossThreadRecipeManager.RecipeThreadState::isRunning).count();
+   }
 
-    public int getTotalActiveParallel() {
-        return this.states.values().stream().filter(RecipeThreadState::isRunning).mapToInt(recipeThreadState -> recipeThreadState.parallel).sum();
-    }
+   public int getTotalActiveParallel() {
+      return this.states.values().stream().filter(CrossThreadRecipeManager.RecipeThreadState::isRunning).mapToInt(var0 -> var0.parallel).sum();
+   }
 
-    public int getMaxActiveParallel() {
-        return this.states.values().stream().filter(RecipeThreadState::isRunning).mapToInt(recipeThreadState -> recipeThreadState.parallel).max().orElse(0);
-    }
+   public int getMaxActiveParallel() {
+      return this.states.values().stream().filter(CrossThreadRecipeManager.RecipeThreadState::isRunning).mapToInt(var0 -> var0.parallel).max().orElse(0);
+   }
 
-    public double getMaxActiveEnergyFactor() {
-        return this.states.values().stream().filter(RecipeThreadState::isRunning).mapToDouble(recipeThreadState -> recipeThreadState.energyFactor).max().orElse(1.0);
-    }
+   public double getMaxActiveEnergyFactor() {
+      return this.states
+         .values()
+         .stream()
+         .filter(CrossThreadRecipeManager.RecipeThreadState::isRunning)
+         .mapToDouble(var0 -> var0.energyFactor)
+         .max()
+         .orElse(1.0);
+   }
 
-    public ProgressSnapshot getProgressSnapshot() {
-        List<ThreadProgress> list = this.states.values().stream().filter(RecipeThreadState::hasWork).sorted(Comparator.comparing(recipeThreadState -> recipeThreadState.roomId)).map(recipeThreadState -> {
-            double d = recipeThreadState.outputsReady ? 1.0 : (recipeThreadState.totalEnergy > 0L ? (double)recipeThreadState.usedEnergy / (double)recipeThreadState.totalEnergy : 0.0);
-            float f = (float)Math.max(0.0, Math.min(1.0, d));
-            return new ThreadProgress(f, Math.max(1, recipeThreadState.parallel), recipeThreadState.outputsReady);
-        }).toList();
-        return new ProgressSnapshot(list);
-    }
-
-    public boolean tick(MachineBlockEntity machineBlockEntity, CrafterComponent crafterComponent, ThreadIsolationAccess threadIsolationAccess, boolean bl) {
-        boolean bl2;
-        int n;
-        int n2;
-        CrafterComponent.Behavior behavior = crafterComponent.getBehavior();
-        LinkedHashMap<String, ThreadIsolationRoom> linkedHashMap = new LinkedHashMap<String, ThreadIsolationRoom>();
-        for (ThreadIsolationRoom threadIsolationRoom : threadIsolationAccess.aeind$isolationRooms()) {
-            linkedHashMap.putIfAbsent(threadIsolationRoom.id(), threadIsolationRoom);
-        }
-        boolean n3 = this.flushCompletedOutputs(crafterComponent.getInventory());
-        if (bl && behavior.isEnabled()) {
-            int n4 = MIParallelHatchCompat.getParallelLimit(machineBlockEntity);
-            n2 = Math.max(Math.max(1, threadIsolationAccess.aeind$maxParallelPerThread()), n4);
-            for (ThreadIsolationRoom threadIsolationRoom : linkedHashMap.values()) {
-                RecipeThreadState recipeThreadState = this.states.computeIfAbsent(threadIsolationRoom.id(), RecipeThreadState::new);
-                if (recipeThreadState.hasWork()) continue;
-                n = this.tryStart(machineBlockEntity, crafterComponent, threadIsolationRoom, recipeThreadState, n2, n4 > 1) ? 1 : 0;
-                n5 |= n;
-                if (n != 0 || recipeThreadState.efficiencyTicks <= 0) continue;
-                --recipeThreadState.efficiencyTicks;
-                if (recipeThreadState.efficiencyTicks == 0) {
-                    recipeThreadState.recipeId = null;
-                }
-                int n5 = 1;
+   public CrossThreadRecipeManager.ProgressSnapshot getProgressSnapshot() {
+      List<CrossThreadRecipeManager.ThreadProgress> var1 = this.states
+         .values()
+         .stream()
+         .filter(CrossThreadRecipeManager.RecipeThreadState::hasWork)
+         .sorted(Comparator.comparing(var0 -> var0.roomId))
+         .map(var0 -> {
+            double var1x;
+            if (var0.outputsReady) {
+               var1x = 1.0;
+            } else if (var0.totalEnergy > 0L) {
+               var1x = (double)var0.usedEnergy / var0.totalEnergy;
+            } else {
+               var1x = 0.0;
             }
-        }
-        List<RecipeThreadState> list = this.states.values().stream().filter(RecipeThreadState::isRunning).toList();
-        n2 = 0;
-        if (!list.isEmpty() && behavior.isEnabled()) {
-            Object object = new long[list.size()];
-            long l = 0L;
-            for (n = 0; n < list.size(); ++n) {
-                RecipeThreadState recipeThreadState = list.get(n);
-                RecipeHolder<MachineRecipe> recipeHolder = CrossThreadRecipeManager.getRecipe(behavior, recipeThreadState.recipeId);
-                if (recipeHolder == null || !((MachineRecipe)recipeHolder.value()).conditionsMatch(CrossThreadRecipeManager.conditionContext(machineBlockEntity))) continue;
-                long l2 = CrossThreadRecipeManager.getRecipeMaxEu(behavior, (MachineRecipe)recipeHolder.value(), recipeThreadState.efficiencyTicks);
-                long l3 = recipeThreadState.usedEnergy >= recipeThreadState.totalEnergy ? 0L : recipeThreadState.totalEnergy - recipeThreadState.usedEnergy;
-                object[n] = Math.min(MIParallelHatchCompat.scaleEnergy(l2, recipeThreadState.parallel, recipeThreadState.energyFactor), l3);
-                l = CrossThreadRecipeManager.saturatedAdd(l, (long)object[n]);
-            }
-            long l4 = behavior.consumeEu(l, Simulation.SIMULATE);
-            int n6 = list.size();
-            int n7 = Math.floorMod(this.fairnessCursor++, n6);
-            int n8 = n6;
-            for (int i = 0; i < n6; ++i) {
-                int n9 = (n7 + i) % n6;
-                RecipeThreadState recipeThreadState = list.get(n9);
-                Object object2 = object[n9];
-                long l5 = n8 == 0 ? 0L : CrossThreadRecipeManager.divideCeil(l4, n8);
-                long l6 = Math.min((long)object2, l5);
-                long l7 = l6 == 0L ? 0L : behavior.consumeEu(l6, Simulation.ACT);
-                l4 -= l7;
-                --n8;
-                recipeThreadState.usedEnergy = CrossThreadRecipeManager.saturatedAdd(recipeThreadState.usedEnergy, l7);
-                n2 |= l7 > 0L ? 1 : 0;
-                if (l7 < object2 && recipeThreadState.efficiencyTicks > 0) {
-                    --recipeThreadState.efficiencyTicks;
-                }
-                if (l7 > 0L) {
-                    bl2 = true;
-                }
-                if (recipeThreadState.usedEnergy < recipeThreadState.totalEnergy) continue;
-                this.finishRecipe(machineBlockEntity, crafterComponent, recipeThreadState);
-                bl2 = true;
-            }
-        }
-        int n10 = bl2 | this.flushCompletedOutputs(crafterComponent.getInventory());
-        if (!bl && !this.hasWork()) {
-            this.states.clear();
-        } else {
-            this.states.entrySet().removeIf(entry -> !linkedHashMap.containsKey(entry.getKey()) && !((RecipeThreadState)entry.getValue()).hasWork());
-        }
-        if (n10 != 0) {
-            machineBlockEntity.setChanged();
-        }
-        return n2 != 0;
-    }
 
-    private boolean tryStart(MachineBlockEntity machineBlockEntity, CrafterComponent crafterComponent, ThreadIsolationRoom threadIsolationRoom, RecipeThreadState recipeThreadState, int n, boolean bl) {
-        int n2;
-        Object object;
-        CrafterComponent.Behavior behavior = crafterComponent.getBehavior();
-        MachineProcessCondition.Context context = CrossThreadRecipeManager.conditionContext(machineBlockEntity);
-        if (recipeThreadState.recipeId != null && recipeThreadState.efficiencyTicks > 0 && (object = CrossThreadRecipeManager.getRecipe(behavior, recipeThreadState.recipeId)) != null && (n2 = this.findParallel(crafterComponent, threadIsolationRoom, (MachineRecipe)object.value(), n)) > 0 && ((MachineRecipe)object.value()).conditionsMatch(context)) {
-            return this.startRecipe(machineBlockEntity, crafterComponent, threadIsolationRoom, recipeThreadState, (RecipeHolder<MachineRecipe>)object, n2, bl);
-        }
-        object = CrafterComponent.getRecipes((ServerLevel)behavior.getCrafterWorld(), (MachineRecipeType)behavior.recipeType(), threadIsolationRoom.itemInputs());
-        ArrayList<MachineRecipe> arrayList = new ArrayList<MachineRecipe>((Collection<MachineRecipe>)object);
-        arrayList.sort(Comparator.comparing(recipeHolder -> recipeHolder.id().toString()));
-        for (RecipeHolder recipeHolder2 : arrayList) {
-            int n3;
-            MachineRecipe machineRecipe = (MachineRecipe)recipeHolder2.value();
-            if (behavior.banRecipe(machineRecipe) || !machineRecipe.conditionsMatch(context) || (n3 = this.findParallel(crafterComponent, threadIsolationRoom, machineRecipe, n)) <= 0) continue;
-            return this.startRecipe(machineBlockEntity, crafterComponent, threadIsolationRoom, recipeThreadState, (RecipeHolder<MachineRecipe>)recipeHolder2, n3, bl);
-        }
-        return false;
-    }
+            float var3 = (float)Math.max(0.0, Math.min(1.0, var1x));
+            return new CrossThreadRecipeManager.ThreadProgress(var3, Math.max(1, var0.parallel), var0.outputsReady);
+         })
+         .toList();
+      return new CrossThreadRecipeManager.ProgressSnapshot(var1);
+   }
 
-    private int findParallel(CrafterComponent crafterComponent, ThreadIsolationRoom threadIsolationRoom, MachineRecipe machineRecipe, int n) {
-        int n2 = Math.min(Math.max(1, n), 1024);
-        int n3 = 1;
-        int n4 = n2;
-        int n5 = 0;
-        while (n3 <= n4) {
-            boolean bl;
-            int n6 = n3 + (n4 - n3) / 2;
-            boolean bl2 = bl = CrossThreadRecipeManager.canTakeInputs(crafterComponent.getBehavior(), threadIsolationRoom, machineRecipe, n6) && this.canReserveOutputs(crafterComponent.getInventory(), machineRecipe, n6, crafterComponent.getBehavior().getMaxFluidOutputs());
-            if (bl) {
-                n5 = n6;
-                n3 = n6 + 1;
-                continue;
+   public boolean tick(MachineBlockEntity var1, CrafterComponent var2, ThreadIsolationAccess var3, boolean var4) {
+      Behavior var5 = var2.getBehavior();
+      LinkedHashMap<String, ThreadIsolationRoom> var6 = new LinkedHashMap<>();
+
+      for (ThreadIsolationRoom var8 : var3.aeind$isolationRooms()) {
+         var6.putIfAbsent(var8.id(), var8);
+      }
+
+      boolean var29 = this.flushCompletedOutputs(var2.getInventory());
+      if (var4 && var5.isEnabled()) {
+         int var31 = MIParallelHatchCompat.getParallelLimit(var1);
+         int var9 = Math.max(Math.max(1, var3.aeind$maxParallelPerThread()), var31);
+
+         for (ThreadIsolationRoom var11 : var6.values()) {
+            CrossThreadRecipeManager.RecipeThreadState var12 = this.states.computeIfAbsent(var11.id(), CrossThreadRecipeManager.RecipeThreadState::new);
+            if (!var12.hasWork()) {
+               boolean var13 = this.tryStart(var1, var2, var11, var12, var9, var31 > 1);
+               var29 |= var13;
+               if (!var13 && var12.efficiencyTicks > 0) {
+                  var12.efficiencyTicks--;
+                  if (var12.efficiencyTicks == 0) {
+                     var12.recipeId = null;
+                  }
+
+                  var29 = true;
+               }
             }
-            n4 = n6 - 1;
-        }
-        return n5;
-    }
+         }
+      }
 
-    private boolean startRecipe(MachineBlockEntity machineBlockEntity, CrafterComponent crafterComponent, ThreadIsolationRoom threadIsolationRoom, RecipeThreadState recipeThreadState, RecipeHolder<MachineRecipe> recipeHolder, int n, boolean bl) {
-        MachineRecipe machineRecipe = (MachineRecipe)recipeHolder.value();
-        if (!CrossThreadRecipeManager.takeInputs(crafterComponent.getBehavior(), threadIsolationRoom, machineRecipe, n)) {
+      List<CrossThreadRecipeManager.RecipeThreadState> var32 = this.states.values().stream().filter(CrossThreadRecipeManager.RecipeThreadState::isRunning).toList();
+      boolean var33 = false;
+      if (!var32.isEmpty() && var5.isEnabled()) {
+         long[] var34 = new long[var32.size()];
+         long var35 = 0L;
+
+         for (int var36 = 0; var36 < var32.size(); var36++) {
+            CrossThreadRecipeManager.RecipeThreadState var14 = var32.get(var36);
+            RecipeHolder<MachineRecipe> var15 = getRecipe(var5, var14.recipeId);
+            if (var15 != null && var15.value().conditionsMatch(conditionContext(var1))) {
+               long var16 = getRecipeMaxEu(var5, var15.value(), var14.efficiencyTicks);
+               long var18 = var14.usedEnergy >= var14.totalEnergy ? 0L : var14.totalEnergy - var14.usedEnergy;
+               var34[var36] = Math.min(MIParallelHatchCompat.scaleEnergy(var16, var14.parallel, var14.energyFactor), var18);
+               var35 = saturatedAdd(var35, var34[var36]);
+            }
+         }
+
+         long var37 = var5.consumeEu(var35, Simulation.SIMULATE);
+         int var38 = var32.size();
+         int var39 = Math.floorMod(this.fairnessCursor++, var38);
+         int var17 = var38;
+
+         for (int var40 = 0; var40 < var38; var40++) {
+            int var19 = (var39 + var40) % var38;
+            CrossThreadRecipeManager.RecipeThreadState var20 = var32.get(var19);
+            long var21 = var34[var19];
+            long var23 = var17 == 0 ? 0L : divideCeil(var37, var17);
+            long var25 = Math.min(var21, var23);
+            long var27 = var25 == 0L ? 0L : var5.consumeEu(var25, Simulation.ACT);
+            var37 -= var27;
+            var17--;
+            var20.usedEnergy = saturatedAdd(var20.usedEnergy, var27);
+            var33 |= var27 > 0L;
+            if (var27 < var21 && var20.efficiencyTicks > 0) {
+               var20.efficiencyTicks--;
+            }
+
+            if (var27 > 0L) {
+               var29 = true;
+            }
+
+            if (var20.usedEnergy >= var20.totalEnergy) {
+               this.finishRecipe(var1, var2, var20);
+               var29 = true;
+            }
+         }
+      }
+
+      var29 |= this.flushCompletedOutputs(var2.getInventory());
+      if (!var4 && !this.hasWork()) {
+         this.states.clear();
+      } else {
+         this.states.entrySet().removeIf(var1x -> !var6.containsKey(var1x.getKey()) && !var1x.getValue().hasWork());
+      }
+
+      if (var29) {
+         var1.setChanged();
+      }
+
+      return var33;
+   }
+
+   private boolean tryStart(
+      MachineBlockEntity var1, CrafterComponent var2, ThreadIsolationRoom var3, CrossThreadRecipeManager.RecipeThreadState var4, int var5, boolean var6
+   ) {
+      Behavior var7 = var2.getBehavior();
+      Context var8 = conditionContext(var1);
+      if (var4.recipeId != null && var4.efficiencyTicks > 0) {
+          RecipeHolder<MachineRecipe> var9 = getRecipe(var7, var4.recipeId);
+         if (var9 != null) {
+             int var10 = this.findParallel(var2, var3, var9.value(), var5);
+             if (var10 > 0 && var9.value().conditionsMatch(var8)) {
+               return this.startRecipe(var1, var2, var3, var4, var9, var10, var6);
+            }
+         }
+      }
+
+      Collection<RecipeHolder<MachineRecipe>> var15 = CrafterComponent.getRecipes(var7.getCrafterWorld(), var7.recipeType(), var3.itemInputs());
+      ArrayList<RecipeHolder<MachineRecipe>> var16 = new ArrayList<>(var15);
+      var16.sort(Comparator.comparing(var0 -> var0.id().toString()));
+
+      for (RecipeHolder<MachineRecipe> var12 : var16) {
+         MachineRecipe var13 = var12.value();
+         if (!var7.banRecipe(var13) && var13.conditionsMatch(var8)) {
+            int var14 = this.findParallel(var2, var3, var13, var5);
+            if (var14 > 0) {
+               return this.startRecipe(var1, var2, var3, var4, var12, var14, var6);
+            }
+         }
+      }
+
+      return false;
+   }
+
+   private int findParallel(CrafterComponent var1, ThreadIsolationRoom var2, MachineRecipe var3, int var4) {
+      int var5 = Math.min(Math.max(1, var4), 1024);
+      int var6 = 1;
+      int var7 = var5;
+      int var8 = 0;
+
+      while (var6 <= var7) {
+         int var9 = var6 + (var7 - var6) / 2;
+         boolean var10 = canTakeInputs(var1.getBehavior(), var2, var3, var9)
+            && this.canReserveOutputs(var1.getInventory(), var3, var9, var1.getBehavior().getMaxFluidOutputs());
+         if (var10) {
+            var8 = var9;
+            var6 = var9 + 1;
+         } else {
+            var7 = var9 - 1;
+         }
+      }
+
+      return var8;
+   }
+
+   private boolean startRecipe(
+      MachineBlockEntity var1,
+      CrafterComponent var2,
+      ThreadIsolationRoom var3,
+      CrossThreadRecipeManager.RecipeThreadState var4,
+      RecipeHolder<MachineRecipe> var5,
+      int var6,
+      boolean var7
+   ) {
+      MachineRecipe var8 = (MachineRecipe)var5.value();
+      if (!takeInputs(var2.getBehavior(), var3, var8, var6)) {
+         return false;
+      }
+
+      var4.recipeId = var5.id();
+      var4.parallel = var6;
+      var4.energyFactor = var7 ? MIParallelHatchCompat.getEnergyFactor(var1, var6) : var6;
+      var4.usedEnergy = 0L;
+      var4.totalEnergy = MIParallelHatchCompat.scaleEnergy(var8.getTotalEu(), var6, var4.energyFactor);
+      var4.maxEfficiencyTicks = getRecipeMaxEfficiencyTicks(var2.getBehavior(), var8);
+      var4.running = true;
+      var4.outputsReady = false;
+      var4.heldItemOutputs = maximumItemOutputs(var8, var6);
+      var4.heldFluidOutputs = maximumFluidOutputs(var8, var6, var2.getBehavior().getMaxFluidOutputs());
+      return true;
+   }
+
+   private void finishRecipe(MachineBlockEntity var1, CrafterComponent var2, CrossThreadRecipeManager.RecipeThreadState var3) {
+      RecipeHolder var4 = getRecipe(var2.getBehavior(), var3.recipeId);
+      if (var4 == null) {
+         var3.usedEnergy = var3.totalEnergy;
+      } else {
+         var3.heldItemOutputs = rollItemOutputs(var2.getBehavior(), (MachineRecipe)var4.value(), var3.parallel);
+         var3.heldFluidOutputs = rollFluidOutputs(var2.getBehavior(), (MachineRecipe)var4.value(), var3.parallel);
+         var3.running = false;
+         var3.outputsReady = true;
+         var3.usedEnergy = 0L;
+         var3.totalEnergy = 0L;
+         if (var3.efficiencyTicks < var3.maxEfficiencyTicks) {
+            var3.efficiencyTicks++;
+         }
+
+         var2.getBehavior().onCraft();
+         var1.setChanged();
+      }
+   }
+
+   private boolean flushCompletedOutputs(Inventory var1) {
+      boolean var2 = false;
+
+      for (CrossThreadRecipeManager.RecipeThreadState var4 : this.states.values()) {
+         if (var4.outputsReady) {
+            var2 |= flushItems(var1.getItemOutputs(), var4.heldItemOutputs);
+            var2 |= flushFluids(var1.getFluidOutputs(), var4.heldFluidOutputs);
+            var4.heldItemOutputs.removeIf(AbstractConfigurableStack::isEmpty);
+            var4.heldFluidOutputs.removeIf(AbstractConfigurableStack::isEmpty);
+            if (var4.heldItemOutputs.isEmpty() && var4.heldFluidOutputs.isEmpty()) {
+               var4.outputsReady = false;
+               var2 = true;
+            }
+         }
+      }
+
+      return var2;
+   }
+
+   private boolean canReserveOutputs(Inventory var1, MachineRecipe var2, int var3, int var4) {
+      ArrayList<ConfigurableItemStack> var5 = ConfigurableItemStack.copyList(var1.getItemOutputs());
+      ArrayList<ConfigurableFluidStack> var6 = ConfigurableFluidStack.copyList(var1.getFluidOutputs());
+
+      for (CrossThreadRecipeManager.RecipeThreadState var8 : this.states.values()) {
+         if (var8.hasWork()) {
+            if (!insertAllItems(var5, copyItems(var8.heldItemOutputs))) {
+               return false;
+            }
+
+            if (!insertAllFluids(var6, copyFluids(var8.heldFluidOutputs))) {
+               return false;
+            }
+         }
+      }
+
+      return insertAllItems(var5, maximumItemOutputs(var2, var3)) && insertAllFluids(var6, maximumFluidOutputs(var2, var3, var4));
+   }
+
+   private static boolean canTakeInputs(Behavior var0, ThreadIsolationRoom var1, MachineRecipe var2, int var3) {
+      ArrayList<ConfigurableItemStack> var4 = ConfigurableItemStack.copyList(var1.itemInputs());
+      ArrayList<ConfigurableFluidStack> var5 = ConfigurableFluidStack.copyList(var1.fluidInputs());
+
+      for (int var6 = 0; var6 < var3; var6++) {
+         if (!takeItemInputs(null, var4, var2, true) || !takeFluidInputs(var0, var5, var2, true)) {
             return false;
-        }
-        recipeThreadState.recipeId = recipeHolder.id();
-        recipeThreadState.parallel = n;
-        recipeThreadState.energyFactor = bl ? MIParallelHatchCompat.getEnergyFactor(machineBlockEntity, n) : (double)n;
-        recipeThreadState.usedEnergy = 0L;
-        recipeThreadState.totalEnergy = MIParallelHatchCompat.scaleEnergy(machineRecipe.getTotalEu(), n, recipeThreadState.energyFactor);
-        recipeThreadState.maxEfficiencyTicks = CrossThreadRecipeManager.getRecipeMaxEfficiencyTicks(crafterComponent.getBehavior(), machineRecipe);
-        recipeThreadState.running = true;
-        recipeThreadState.outputsReady = false;
-        recipeThreadState.heldItemOutputs = CrossThreadRecipeManager.maximumItemOutputs(machineRecipe, n);
-        recipeThreadState.heldFluidOutputs = CrossThreadRecipeManager.maximumFluidOutputs(machineRecipe, n, crafterComponent.getBehavior().getMaxFluidOutputs());
-        return true;
-    }
+         }
+      }
 
-    private void finishRecipe(MachineBlockEntity machineBlockEntity, CrafterComponent crafterComponent, RecipeThreadState recipeThreadState) {
-        RecipeHolder<MachineRecipe> recipeHolder = CrossThreadRecipeManager.getRecipe(crafterComponent.getBehavior(), recipeThreadState.recipeId);
-        if (recipeHolder == null) {
-            recipeThreadState.usedEnergy = recipeThreadState.totalEnergy;
-            return;
-        }
-        recipeThreadState.heldItemOutputs = CrossThreadRecipeManager.rollItemOutputs(crafterComponent.getBehavior(), (MachineRecipe)recipeHolder.value(), recipeThreadState.parallel);
-        recipeThreadState.heldFluidOutputs = CrossThreadRecipeManager.rollFluidOutputs(crafterComponent.getBehavior(), (MachineRecipe)recipeHolder.value(), recipeThreadState.parallel);
-        recipeThreadState.running = false;
-        recipeThreadState.outputsReady = true;
-        recipeThreadState.usedEnergy = 0L;
-        recipeThreadState.totalEnergy = 0L;
-        if (recipeThreadState.efficiencyTicks < recipeThreadState.maxEfficiencyTicks) {
-            ++recipeThreadState.efficiencyTicks;
-        }
-        crafterComponent.getBehavior().onCraft();
-        machineBlockEntity.setChanged();
-    }
+      return true;
+   }
 
-    private boolean flushCompletedOutputs(CrafterComponent.Inventory inventory) {
-        boolean bl = false;
-        for (RecipeThreadState recipeThreadState : this.states.values()) {
-            if (!recipeThreadState.outputsReady) continue;
-            bl |= CrossThreadRecipeManager.flushItems(inventory.getItemOutputs(), recipeThreadState.heldItemOutputs);
-            bl |= CrossThreadRecipeManager.flushFluids(inventory.getFluidOutputs(), recipeThreadState.heldFluidOutputs);
-            recipeThreadState.heldItemOutputs.removeIf(AbstractConfigurableStack::isEmpty);
-            recipeThreadState.heldFluidOutputs.removeIf(AbstractConfigurableStack::isEmpty);
-            if (!recipeThreadState.heldItemOutputs.isEmpty() || !recipeThreadState.heldFluidOutputs.isEmpty()) continue;
-            recipeThreadState.outputsReady = false;
-            bl = true;
-        }
-        return bl;
-    }
+   private static boolean takeInputs(Behavior var0, ThreadIsolationRoom var1, MachineRecipe var2, int var3) {
+      if (!canTakeInputs(var0, var1, var2, var3)) {
+         return false;
+      }
 
-    private boolean canReserveOutputs(CrafterComponent.Inventory inventory, MachineRecipe machineRecipe, int n, int n2) {
-        ArrayList arrayList = ConfigurableItemStack.copyList((List)inventory.getItemOutputs());
-        ArrayList arrayList2 = ConfigurableFluidStack.copyList((List)inventory.getFluidOutputs());
-        for (RecipeThreadState recipeThreadState : this.states.values()) {
-            if (!recipeThreadState.hasWork()) continue;
-            if (!CrossThreadRecipeManager.insertAllItems(arrayList, CrossThreadRecipeManager.copyItems(recipeThreadState.heldItemOutputs))) {
-                return false;
+      for (int var4 = 0; var4 < var3; var4++) {
+         takeItemInputs(var0, var1.itemInputs(), var2, false);
+         takeFluidInputs(var0, var1.fluidInputs(), var2, false);
+      }
+
+      return true;
+   }
+
+   private static boolean takeItemInputs(Behavior var0, List<ConfigurableItemStack> var1, MachineRecipe var2, boolean var3) {
+      for (ItemInput var5 : var2.itemInputs) {
+         if (var3 || !(var5.probability() < 1.0F) || !(ThreadLocalRandom.current().nextFloat() >= var5.probability())) {
+            int var6 = var5.amount();
+
+            for (ConfigurableItemStack var8 : var1) {
+               if (var8.getAmount() > 0L && var8.getResource().test(var5.ingredient())) {
+                  int var9 = (int)Math.min(var8.getAmount(), var6);
+                  if (var9 > 0) {
+                     if (!var3) {
+                        var0.getStatsOrDummy().addUsedItems(var8.getResource().getItem(), var9);
+                     }
+
+                     var8.decrement(var9);
+                     var6 -= var9;
+                  }
+
+                  if (var6 == 0) {
+                     break;
+                  }
+               }
             }
-            if (CrossThreadRecipeManager.insertAllFluids(arrayList2, CrossThreadRecipeManager.copyFluids(recipeThreadState.heldFluidOutputs))) continue;
-            return false;
-        }
-        return CrossThreadRecipeManager.insertAllItems(arrayList, CrossThreadRecipeManager.maximumItemOutputs(machineRecipe, n)) && CrossThreadRecipeManager.insertAllFluids(arrayList2, CrossThreadRecipeManager.maximumFluidOutputs(machineRecipe, n, n2));
-    }
 
-    private static boolean canTakeInputs(CrafterComponent.Behavior behavior, ThreadIsolationRoom threadIsolationRoom, MachineRecipe machineRecipe, int n) {
-        ArrayList arrayList = ConfigurableItemStack.copyList(threadIsolationRoom.itemInputs());
-        ArrayList arrayList2 = ConfigurableFluidStack.copyList(threadIsolationRoom.fluidInputs());
-        for (int i = 0; i < n; ++i) {
-            if (CrossThreadRecipeManager.takeItemInputs(null, arrayList, machineRecipe, true) && CrossThreadRecipeManager.takeFluidInputs(behavior, arrayList2, machineRecipe, true)) continue;
-            return false;
-        }
-        return true;
-    }
-
-    private static boolean takeInputs(CrafterComponent.Behavior behavior, ThreadIsolationRoom threadIsolationRoom, MachineRecipe machineRecipe, int n) {
-        if (!CrossThreadRecipeManager.canTakeInputs(behavior, threadIsolationRoom, machineRecipe, n)) {
-            return false;
-        }
-        for (int i = 0; i < n; ++i) {
-            CrossThreadRecipeManager.takeItemInputs(behavior, threadIsolationRoom.itemInputs(), machineRecipe, false);
-            CrossThreadRecipeManager.takeFluidInputs(behavior, threadIsolationRoom.fluidInputs(), machineRecipe, false);
-        }
-        return true;
-    }
-
-    private static boolean takeItemInputs(CrafterComponent.Behavior behavior, List<ConfigurableItemStack> list, MachineRecipe machineRecipe, boolean bl) {
-        for (MachineRecipe.ItemInput itemInput : machineRecipe.itemInputs) {
-            if (!bl && itemInput.probability() < 1.0f && ThreadLocalRandom.current().nextFloat() >= itemInput.probability()) continue;
-            int n = itemInput.amount();
-            for (ConfigurableItemStack configurableItemStack : list) {
-                if (configurableItemStack.getAmount() <= 0L || !((ItemVariant)configurableItemStack.getResource()).test((Predicate)itemInput.ingredient())) continue;
-                int n2 = (int)Math.min(configurableItemStack.getAmount(), (long)n);
-                if (n2 > 0) {
-                    if (!bl) {
-                        behavior.getStatsOrDummy().addUsedItems((ItemLike)((ItemVariant)configurableItemStack.getResource()).getItem(), (long)n2);
-                    }
-                    configurableItemStack.decrement((long)n2);
-                    n -= n2;
-                }
-                if (n != 0) continue;
-                break;
+            if (var6 > 0) {
+               return false;
             }
-            if (n <= 0) continue;
-            return false;
-        }
-        return true;
-    }
+         }
+      }
 
-    private static boolean takeFluidInputs(CrafterComponent.Behavior behavior, List<ConfigurableFluidStack> list, MachineRecipe machineRecipe, boolean bl) {
-        boolean[] blArray = behavior != null && behavior.oneFluidInputPerStack() ? new boolean[list.size()] : null;
-        for (MachineRecipe.FluidInput fluidInput : machineRecipe.fluidInputs) {
-            if (!bl && fluidInput.probability() < 1.0f && ThreadLocalRandom.current().nextFloat() >= fluidInput.probability()) continue;
-            long l = fluidInput.amount();
-            for (int i = 0; i < list.size(); ++i) {
-                ConfigurableFluidStack configurableFluidStack;
-                if (blArray != null && blArray[i] || (configurableFluidStack = list.get(i)).getAmount() <= 0L || !fluidInput.fluid().test(configurableFluidStack.toStack())) continue;
-                long l2 = Math.min(configurableFluidStack.getAmount(), l);
-                if (l2 > 0L) {
-                    if (!bl) {
-                        behavior.getStatsOrDummy().addUsedFluids(((FluidVariant)configurableFluidStack.getResource()).getFluid(), l2);
-                    }
-                    configurableFluidStack.decrement(l2);
-                    if (blArray != null) {
-                        blArray[i] = true;
-                    }
-                    l -= l2;
-                }
-                if (l == 0L) break;
-            }
-            if (l <= 0L) continue;
-            return false;
-        }
-        return true;
-    }
+      return true;
+   }
 
-    private static List<ConfigurableItemStack> maximumItemOutputs(MachineRecipe machineRecipe, int n) {
-        ArrayList<ConfigurableItemStack> arrayList = new ArrayList<ConfigurableItemStack>();
-        for (MachineRecipe.ItemOutput itemOutput : machineRecipe.itemOutputs) {
-            CrossThreadRecipeManager.addItem(arrayList, itemOutput.variant(), CrossThreadRecipeManager.saturatedMultiply(itemOutput.amount(), n));
-        }
-        return arrayList;
-    }
+   private static boolean takeFluidInputs(Behavior var0, List<ConfigurableFluidStack> var1, MachineRecipe var2, boolean var3) {
+      boolean[] var4 = var0 != null && var0.oneFluidInputPerStack() ? new boolean[var1.size()] : null;
 
-    private static List<ConfigurableFluidStack> maximumFluidOutputs(MachineRecipe machineRecipe, int n, int n2) {
-        ArrayList<ConfigurableFluidStack> arrayList = new ArrayList<ConfigurableFluidStack>();
-        for (int i = 0; i < Math.min(machineRecipe.fluidOutputs.size(), n2); ++i) {
-            MachineRecipe.FluidOutput fluidOutput = (MachineRecipe.FluidOutput)machineRecipe.fluidOutputs.get(i);
-            CrossThreadRecipeManager.addFluid(arrayList, fluidOutput.fluid(), CrossThreadRecipeManager.saturatedMultiply(fluidOutput.amount(), n));
-        }
-        return arrayList;
-    }
+      for (FluidInput var6 : var2.fluidInputs) {
+         if (var3 || !(var6.probability() < 1.0F) || !(ThreadLocalRandom.current().nextFloat() >= var6.probability())) {
+            long var7 = var6.amount();
 
-    private static List<ConfigurableItemStack> rollItemOutputs(CrafterComponent.Behavior behavior, MachineRecipe machineRecipe, int n) {
-        ArrayList<ConfigurableItemStack> arrayList = new ArrayList<ConfigurableItemStack>();
-        for (int i = 0; i < n; ++i) {
-            for (MachineRecipe.ItemOutput itemOutput : machineRecipe.itemOutputs) {
-                if (!(itemOutput.probability() >= 1.0f) && !(ThreadLocalRandom.current().nextFloat() <= itemOutput.probability())) continue;
-                CrossThreadRecipeManager.addItem(arrayList, itemOutput.variant(), itemOutput.amount());
-                behavior.getStatsOrDummy().addProducedItems((Level)behavior.getCrafterWorld(), (ItemLike)itemOutput.variant().getItem(), (long)itemOutput.amount());
-            }
-        }
-        return arrayList;
-    }
-
-    private static List<ConfigurableFluidStack> rollFluidOutputs(CrafterComponent.Behavior behavior, MachineRecipe machineRecipe, int n) {
-        ArrayList<ConfigurableFluidStack> arrayList = new ArrayList<ConfigurableFluidStack>();
-        int n2 = behavior.getMaxFluidOutputs();
-        for (int i = 0; i < n; ++i) {
-            for (int j = 0; j < Math.min(machineRecipe.fluidOutputs.size(), n2); ++j) {
-                MachineRecipe.FluidOutput fluidOutput = (MachineRecipe.FluidOutput)machineRecipe.fluidOutputs.get(j);
-                if (!(fluidOutput.probability() >= 1.0f) && !(ThreadLocalRandom.current().nextFloat() <= fluidOutput.probability())) continue;
-                CrossThreadRecipeManager.addFluid(arrayList, fluidOutput.fluid(), fluidOutput.amount());
-                behavior.getStatsOrDummy().addProducedFluids(fluidOutput.fluid(), fluidOutput.amount());
-            }
-        }
-        return arrayList;
-    }
-
-    private static void addItem(List<ConfigurableItemStack> list, ItemVariant itemVariant, long l) {
-        if (l <= 0L) {
-            return;
-        }
-        for (ConfigurableItemStack configurableItemStack : list) {
-            if (!((ItemVariant)configurableItemStack.getResource()).equals((Object)itemVariant)) continue;
-            configurableItemStack.increment(l);
-            return;
-        }
-        ConfigurableItemStack configurableItemStack = new ConfigurableItemStack();
-        configurableItemStack.setKey(itemVariant);
-        configurableItemStack.setAmount(l);
-        list.add(configurableItemStack);
-    }
-
-    private static void addFluid(List<ConfigurableFluidStack> list, Fluid fluid, long l) {
-        if (l <= 0L) {
-            return;
-        }
-        FluidVariant fluidVariant = FluidVariant.of((Fluid)fluid);
-        for (ConfigurableFluidStack configurableFluidStack : list) {
-            if (!((FluidVariant)configurableFluidStack.getResource()).equals((Object)fluidVariant)) continue;
-            long l2 = CrossThreadRecipeManager.saturatedAdd(configurableFluidStack.getAmount(), l);
-            configurableFluidStack.setCapacity(l2);
-            configurableFluidStack.setAmount(l2);
-            return;
-        }
-        ConfigurableFluidStack configurableFluidStack = new ConfigurableFluidStack(l);
-        configurableFluidStack.setKey((TransferVariant)fluidVariant);
-        configurableFluidStack.setAmount(l);
-        list.add(configurableFluidStack);
-    }
-
-    private static boolean insertAllItems(List<ConfigurableItemStack> list, List<ConfigurableItemStack> list2) {
-        for (ConfigurableItemStack configurableItemStack : list2) {
-            long l = configurableItemStack.getAmount();
-            block1: for (int i = 0; i < 2 && l > 0L; ++i) {
-                for (ConfigurableItemStack configurableItemStack2 : list) {
-                    boolean bl = ((ItemVariant)configurableItemStack2.getResource()).equals((Object)configurableItemStack.getResource());
-                    boolean bl2 = configurableItemStack2.isEmpty();
-                    if (i == 0 && !bl || i == 1 && !bl2 || !configurableItemStack2.isResourceAllowedByLock((TransferVariant)((ItemVariant)configurableItemStack.getResource()))) continue;
-                    long l2 = configurableItemStack2.getCapacity();
-                    long l3 = Math.min(l, Math.max(0L, l2 - configurableItemStack2.getAmount()));
-                    if (l3 > 0L) {
-                        if (bl2) {
-                            configurableItemStack2.setKey((ItemVariant)configurableItemStack.getResource());
+            for (int var9 = 0; var9 < var1.size(); var9++) {
+               if (var4 == null || !var4[var9]) {
+                  ConfigurableFluidStack var10 = (ConfigurableFluidStack)var1.get(var9);
+                  if (var10.getAmount() > 0L && var6.fluid().test(var10.toStack())) {
+                     long var11 = Math.min(var10.getAmount(), var7);
+                     if (var11 > 0L) {
+                        if (!var3) {
+                           var0.getStatsOrDummy().addUsedFluids(var10.getResource().getFluid(), var11);
                         }
-                        configurableItemStack2.increment(l3);
-                        l -= l3;
-                    }
-                    if (l != 0L) continue;
-                    continue block1;
-                }
-            }
-            configurableItemStack.setAmount(l);
-            if (l <= 0L) continue;
-            return false;
-        }
-        return true;
-    }
 
-    private static boolean insertAllFluids(List<ConfigurableFluidStack> list, List<ConfigurableFluidStack> list2) {
-        for (ConfigurableFluidStack configurableFluidStack : list2) {
-            long l = configurableFluidStack.getAmount();
-            block1: for (int i = 0; i < 2 && l > 0L; ++i) {
-                for (ConfigurableFluidStack configurableFluidStack2 : list) {
-                    boolean bl = ((FluidVariant)configurableFluidStack2.getResource()).equals((Object)configurableFluidStack.getResource());
-                    boolean bl2 = configurableFluidStack2.isEmpty();
-                    if (i == 0 && !bl || i == 1 && !bl2 || !configurableFluidStack2.isResourceAllowedByLock((TransferVariant)((FluidVariant)configurableFluidStack.getResource()))) continue;
-                    long l2 = Math.min(l, configurableFluidStack2.getRemainingSpace());
-                    if (l2 > 0L) {
-                        if (bl2) {
-                            configurableFluidStack2.setKey((TransferVariant)((FluidVariant)configurableFluidStack.getResource()));
+                        var10.decrement(var11);
+                        if (var4 != null) {
+                           var4[var9] = true;
                         }
-                        configurableFluidStack2.increment(l2);
-                        l -= l2;
-                    }
-                    if (l != 0L) continue;
-                    continue block1;
-                }
+
+                        var7 -= var11;
+                     }
+
+                     if (var7 == 0L) {
+                        break;
+                     }
+                  }
+               }
             }
-            configurableFluidStack.setAmount(l);
-            if (l <= 0L) continue;
+
+            if (var7 > 0L) {
+               return false;
+            }
+         }
+      }
+
+      return true;
+   }
+
+   private static List<ConfigurableItemStack> maximumItemOutputs(MachineRecipe var0, int var1) {
+      ArrayList<ConfigurableItemStack> var2 = new ArrayList<>();
+
+      for (ItemOutput var4 : var0.itemOutputs) {
+         addItem(var2, var4.variant(), saturatedMultiply(var4.amount(), var1));
+      }
+
+      return var2;
+   }
+
+   private static List<ConfigurableFluidStack> maximumFluidOutputs(MachineRecipe var0, int var1, int var2) {
+      ArrayList<ConfigurableFluidStack> var3 = new ArrayList<>();
+
+      for (int var4 = 0; var4 < Math.min(var0.fluidOutputs.size(), var2); var4++) {
+         FluidOutput var5 = var0.fluidOutputs.get(var4);
+         addFluid(var3, var5.fluid(), saturatedMultiply(var5.amount(), var1));
+      }
+
+      return var3;
+   }
+
+   private static List<ConfigurableItemStack> rollItemOutputs(Behavior var0, MachineRecipe var1, int var2) {
+      ArrayList<ConfigurableItemStack> var3 = new ArrayList<>();
+
+      for (int var4 = 0; var4 < var2; var4++) {
+         for (ItemOutput var6 : var1.itemOutputs) {
+            if (var6.probability() >= 1.0F || ThreadLocalRandom.current().nextFloat() <= var6.probability()) {
+               addItem(var3, var6.variant(), var6.amount());
+               var0.getStatsOrDummy().addProducedItems(var0.getCrafterWorld(), var6.variant().getItem(), var6.amount());
+            }
+         }
+      }
+
+      return var3;
+   }
+
+   private static List<ConfigurableFluidStack> rollFluidOutputs(Behavior var0, MachineRecipe var1, int var2) {
+      ArrayList<ConfigurableFluidStack> var3 = new ArrayList<>();
+      int var4 = var0.getMaxFluidOutputs();
+
+      for (int var5 = 0; var5 < var2; var5++) {
+         for (int var6 = 0; var6 < Math.min(var1.fluidOutputs.size(), var4); var6++) {
+            FluidOutput var7 = var1.fluidOutputs.get(var6);
+            if (var7.probability() >= 1.0F || ThreadLocalRandom.current().nextFloat() <= var7.probability()) {
+               addFluid(var3, var7.fluid(), var7.amount());
+               var0.getStatsOrDummy().addProducedFluids(var7.fluid(), var7.amount());
+            }
+         }
+      }
+
+      return var3;
+   }
+
+   private static void addItem(List<ConfigurableItemStack> var0, ItemVariant var1, long var2) {
+      if (var2 > 0L) {
+         for (ConfigurableItemStack var5 : var0) {
+            if (var5.getResource().equals(var1)) {
+               var5.increment(var2);
+               return;
+            }
+         }
+
+         ConfigurableItemStack var6 = new ConfigurableItemStack();
+         var6.setKey(var1);
+         var6.setAmount(var2);
+         var0.add(var6);
+      }
+   }
+
+   private static void addFluid(List<ConfigurableFluidStack> var0, Fluid var1, long var2) {
+      if (var2 > 0L) {
+         FluidVariant var4 = FluidVariant.of(var1);
+
+         for (ConfigurableFluidStack var6 : var0) {
+            if (var6.getResource().equals(var4)) {
+               long var7 = saturatedAdd(var6.getAmount(), var2);
+               var6.setCapacity(var7);
+               var6.setAmount(var7);
+               return;
+            }
+         }
+
+         ConfigurableFluidStack var9 = new ConfigurableFluidStack(var2);
+         var9.setKey(var4);
+         var9.setAmount(var2);
+         var0.add(var9);
+      }
+   }
+
+   private static boolean insertAllItems(List<ConfigurableItemStack> var0, List<ConfigurableItemStack> var1) {
+      for (ConfigurableItemStack var3 : var1) {
+         long var4 = var3.getAmount();
+
+         for (int var6 = 0; var6 < 2 && var4 > 0L; var6++) {
+            for (ConfigurableItemStack var8 : var0) {
+               boolean var9 = var8.getResource().equals(var3.getResource());
+               boolean var10 = var8.isEmpty();
+               if ((var6 != 0 || var9) && (var6 != 1 || var10) && var8.isResourceAllowedByLock(var3.getResource())) {
+                  long var11 = Math.min(var8.getAdjustedCapacity(), var3.getResource().getMaxStackSize());
+                  long var13 = Math.min(var4, Math.max(0L, var11 - var8.getAmount()));
+                  if (var13 > 0L) {
+                     if (var10) {
+                        var8.setKey(var3.getResource());
+                     }
+
+                     var8.increment(var13);
+                     var4 -= var13;
+                  }
+
+                  if (var4 == 0L) {
+                     break;
+                  }
+               }
+            }
+         }
+
+         var3.setAmount(var4);
+         if (var4 > 0L) {
             return false;
-        }
-        return true;
-    }
+         }
+      }
 
-    private static boolean flushItems(List<ConfigurableItemStack> list, List<ConfigurableItemStack> list2) {
-        long l = list2.stream().mapToLong(AbstractConfigurableStack::getAmount).sum();
-        CrossThreadRecipeManager.insertAllItems(list, list2);
-        long l2 = list2.stream().mapToLong(AbstractConfigurableStack::getAmount).sum();
-        return l != l2;
-    }
+      return true;
+   }
 
-    private static boolean flushFluids(List<ConfigurableFluidStack> list, List<ConfigurableFluidStack> list2) {
-        long l = list2.stream().mapToLong(AbstractConfigurableStack::getAmount).sum();
-        CrossThreadRecipeManager.insertAllFluids(list, list2);
-        long l2 = list2.stream().mapToLong(AbstractConfigurableStack::getAmount).sum();
-        return l != l2;
-    }
+   private static boolean insertAllFluids(List<ConfigurableFluidStack> var0, List<ConfigurableFluidStack> var1) {
+      for (ConfigurableFluidStack var3 : var1) {
+         long var4 = var3.getAmount();
 
-    private static List<ConfigurableItemStack> copyItems(List<ConfigurableItemStack> list) {
-        return ConfigurableItemStack.copyList(list);
-    }
+         for (int var6 = 0; var6 < 2 && var4 > 0L; var6++) {
+            for (ConfigurableFluidStack var8 : var0) {
+               boolean var9 = var8.getResource().equals(var3.getResource());
+               boolean var10 = var8.isEmpty();
+               if ((var6 != 0 || var9) && (var6 != 1 || var10) && var8.isResourceAllowedByLock(var3.getResource())) {
+                  long var11 = Math.min(var4, var8.getRemainingSpace());
+                  if (var11 > 0L) {
+                     if (var10) {
+                        var8.setKey(var3.getResource());
+                     }
 
-    private static List<ConfigurableFluidStack> copyFluids(List<ConfigurableFluidStack> list) {
-        return ConfigurableFluidStack.copyList(list);
-    }
+                     var8.increment(var11);
+                     var4 -= var11;
+                  }
 
-    private static RecipeHolder<MachineRecipe> getRecipe(CrafterComponent.Behavior behavior, ResourceLocation resourceLocation) {
-        return resourceLocation == null ? null : behavior.recipeType().getRecipe(behavior.getCrafterWorld(), resourceLocation);
-    }
-
-    private static MachineProcessCondition.Context conditionContext(MachineBlockEntity machineBlockEntity) {
-        return () -> machineBlockEntity;
-    }
-
-    private static long getRecipeMaxEu(CrafterComponent.Behavior behavior, MachineRecipe machineRecipe, int n) {
-        long l = machineRecipe.getTotalEu();
-        long l2 = Math.max(behavior.getBaseRecipeEu(), (long)machineRecipe.eu);
-        long l3 = l2 + (long)n * l / 600L;
-        return Math.min(l, Math.min(l3, behavior.getMaxRecipeEu()));
-    }
-
-    private static int getRecipeMaxEfficiencyTicks(CrafterComponent.Behavior behavior, MachineRecipe machineRecipe) {
-        long l = Math.min(behavior.getMaxRecipeEu(), machineRecipe.getTotalEu());
-        for (int i = 0; i < Integer.MAX_VALUE; ++i) {
-            if (CrossThreadRecipeManager.getRecipeMaxEu(behavior, machineRecipe, i) != l) continue;
-            return i;
-        }
-        return 0;
-    }
-
-    private static long saturatedMultiply(long l, long l2) {
-        if (l == 0L || l2 == 0L) {
-            return 0L;
-        }
-        if (l > Long.MAX_VALUE / l2) {
-            return Long.MAX_VALUE;
-        }
-        return l * l2;
-    }
-
-    private static long saturatedAdd(long l, long l2) {
-        if (Long.MAX_VALUE - l < l2) {
-            return Long.MAX_VALUE;
-        }
-        return l + l2;
-    }
-
-    private static long divideCeil(long l, int n) {
-        if (l == 0L) {
-            return 0L;
-        }
-        return 1L + (l - 1L) / (long)n;
-    }
-
-    public void writeNbt(CompoundTag compoundTag, HolderLookup.Provider provider) {
-        CompoundTag compoundTag2 = new CompoundTag();
-        compoundTag2.putInt("version", 2);
-        compoundTag2.putInt("fairnessCursor", this.fairnessCursor);
-        ListTag listTag = new ListTag();
-        for (RecipeThreadState recipeThreadState : this.states.values()) {
-            if (recipeThreadState.recipeId == null && !recipeThreadState.hasWork() && recipeThreadState.efficiencyTicks == 0) continue;
-            CompoundTag compoundTag3 = new CompoundTag();
-            compoundTag3.putString("room", recipeThreadState.roomId);
-            if (recipeThreadState.recipeId != null) {
-                compoundTag3.putString("recipe", recipeThreadState.recipeId.toString());
+                  if (var4 == 0L) {
+                     break;
+                  }
+               }
             }
-            compoundTag3.putInt("parallel", recipeThreadState.parallel);
-            compoundTag3.putDouble("energyFactor", recipeThreadState.energyFactor);
-            compoundTag3.putLong("usedEnergy", recipeThreadState.usedEnergy);
-            compoundTag3.putLong("totalEnergy", recipeThreadState.totalEnergy);
-            compoundTag3.putInt("efficiencyTicks", recipeThreadState.efficiencyTicks);
-            compoundTag3.putInt("maxEfficiencyTicks", recipeThreadState.maxEfficiencyTicks);
-            compoundTag3.putBoolean("running", recipeThreadState.running);
-            compoundTag3.putBoolean("outputsReady", recipeThreadState.outputsReady);
-            compoundTag3.put("itemOutputs", (Tag)CrossThreadRecipeManager.writeItems(recipeThreadState.heldItemOutputs, provider));
-            compoundTag3.put("fluidOutputs", (Tag)CrossThreadRecipeManager.writeFluids(recipeThreadState.heldFluidOutputs, provider));
-            listTag.add((Object)compoundTag3);
-        }
-        compoundTag2.put("threads", (Tag)listTag);
-        compoundTag.put(NBT_KEY, (Tag)compoundTag2);
-    }
+         }
 
-    public void readNbt(CompoundTag compoundTag, HolderLookup.Provider provider) {
-        this.states.clear();
-        if (!compoundTag.contains(NBT_KEY, 10)) {
-            return;
-        }
-        CompoundTag compoundTag2 = compoundTag.getCompound(NBT_KEY);
-        this.fairnessCursor = compoundTag2.getInt("fairnessCursor");
-        ListTag listTag = compoundTag2.getList("threads", 10);
-        for (int i = 0; i < listTag.size(); ++i) {
-            CompoundTag compoundTag3 = listTag.getCompound(i);
-            String string = compoundTag3.getString("room");
-            if (string.isEmpty()) continue;
-            RecipeThreadState recipeThreadState = new RecipeThreadState(string);
-            recipeThreadState.recipeId = compoundTag3.contains("recipe") ? ResourceLocation.tryParse((String)compoundTag3.getString("recipe")) : null;
-            recipeThreadState.parallel = Math.max(1, compoundTag3.getInt("parallel"));
-            double d = compoundTag3.contains("energyFactor", 6) ? compoundTag3.getDouble("energyFactor") : (double)recipeThreadState.parallel;
-            recipeThreadState.energyFactor = Double.isFinite(d) && d >= 1.0 ? d : (double)recipeThreadState.parallel;
-            recipeThreadState.usedEnergy = Math.max(0L, compoundTag3.getLong("usedEnergy"));
-            recipeThreadState.totalEnergy = Math.max(0L, compoundTag3.getLong("totalEnergy"));
-            recipeThreadState.efficiencyTicks = Math.max(0, compoundTag3.getInt("efficiencyTicks"));
-            recipeThreadState.maxEfficiencyTicks = Math.max(0, compoundTag3.getInt("maxEfficiencyTicks"));
-            recipeThreadState.running = compoundTag3.getBoolean("running");
-            recipeThreadState.outputsReady = compoundTag3.getBoolean("outputsReady");
-            recipeThreadState.heldItemOutputs = CrossThreadRecipeManager.readItems(compoundTag3.getList("itemOutputs", 10), provider);
-            recipeThreadState.heldFluidOutputs = CrossThreadRecipeManager.readFluids(compoundTag3.getList("fluidOutputs", 10), provider);
-            this.states.put(string, recipeThreadState);
-        }
-    }
+         var3.setAmount(var4);
+         if (var4 > 0L) {
+            return false;
+         }
+      }
 
-    private static ListTag writeItems(List<ConfigurableItemStack> list, HolderLookup.Provider provider) {
-        ListTag listTag = new ListTag();
-        for (ConfigurableItemStack configurableItemStack : list) {
-            listTag.add((Object)configurableItemStack.toNbt(provider));
-        }
-        return listTag;
-    }
+      return true;
+   }
 
-    private static ListTag writeFluids(List<ConfigurableFluidStack> list, HolderLookup.Provider provider) {
-        ListTag listTag = new ListTag();
-        for (ConfigurableFluidStack configurableFluidStack : list) {
-            listTag.add((Object)configurableFluidStack.toNbt(provider));
-        }
-        return listTag;
-    }
+   private static boolean flushItems(List<ConfigurableItemStack> var0, List<ConfigurableItemStack> var1) {
+      long var2 = var1.stream().mapToLong(AbstractConfigurableStack::getAmount).sum();
+      insertAllItems(var0, var1);
+      long var4 = var1.stream().mapToLong(AbstractConfigurableStack::getAmount).sum();
+      return var2 != var4;
+   }
 
-    private static List<ConfigurableItemStack> readItems(ListTag listTag, HolderLookup.Provider provider) {
-        ArrayList<ConfigurableItemStack> arrayList = new ArrayList<ConfigurableItemStack>();
-        for (int i = 0; i < listTag.size(); ++i) {
-            arrayList.add(new ConfigurableItemStack(listTag.getCompound(i), provider));
-        }
-        return arrayList;
-    }
+   private static boolean flushFluids(List<ConfigurableFluidStack> var0, List<ConfigurableFluidStack> var1) {
+      long var2 = var1.stream().mapToLong(AbstractConfigurableStack::getAmount).sum();
+      insertAllFluids(var0, var1);
+      long var4 = var1.stream().mapToLong(AbstractConfigurableStack::getAmount).sum();
+      return var2 != var4;
+   }
 
-    private static List<ConfigurableFluidStack> readFluids(ListTag listTag, HolderLookup.Provider provider) {
-        ArrayList<ConfigurableFluidStack> arrayList = new ArrayList<ConfigurableFluidStack>();
-        for (int i = 0; i < listTag.size(); ++i) {
-            arrayList.add(new ConfigurableFluidStack(listTag.getCompound(i), provider));
-        }
-        return arrayList;
-    }
+   private static List<ConfigurableItemStack> copyItems(List<ConfigurableItemStack> var0) {
+      return ConfigurableItemStack.copyList(var0);
+   }
 
-    public record ProgressSnapshot(List<ThreadProgress> threads) {
-    }
+   private static List<ConfigurableFluidStack> copyFluids(List<ConfigurableFluidStack> var0) {
+      return ConfigurableFluidStack.copyList(var0);
+   }
 
-    private static final class RecipeThreadState {
-        private final String roomId;
-        private ResourceLocation recipeId;
-        private int parallel = 1;
-        private double energyFactor = 1.0;
-        private long usedEnergy;
-        private long totalEnergy;
-        private int efficiencyTicks;
-        private int maxEfficiencyTicks;
-        private boolean running;
-        private boolean outputsReady;
-        private List<ConfigurableItemStack> heldItemOutputs = new ArrayList<ConfigurableItemStack>();
-        private List<ConfigurableFluidStack> heldFluidOutputs = new ArrayList<ConfigurableFluidStack>();
+   private static RecipeHolder<MachineRecipe> getRecipe(Behavior var0, ResourceLocation var1) {
+      return var1 == null ? null : var0.recipeType().getRecipe(var0.getCrafterWorld(), var1);
+   }
 
-        private RecipeThreadState(String string) {
-            this.roomId = string;
-        }
+   private static Context conditionContext(MachineBlockEntity var0) {
+      return () -> var0;
+   }
 
-        private boolean isRunning() {
-            return this.running;
-        }
+   private static long getRecipeMaxEu(Behavior var0, MachineRecipe var1, int var2) {
+      long var3 = var1.getTotalEu();
+      long var5 = Math.max(var0.getBaseRecipeEu(), var1.eu);
+      long var7 = var5 + var2 * var3 / 600L;
+      return Math.min(var3, Math.min(var7, var0.getMaxRecipeEu()));
+   }
 
-        private boolean hasWork() {
-            return this.running || this.outputsReady;
-        }
-    }
+   private static int getRecipeMaxEfficiencyTicks(Behavior var0, MachineRecipe var1) {
+      long var2 = Math.min(var0.getMaxRecipeEu(), var1.getTotalEu());
 
-    public record ThreadProgress(float progress, int parallel, boolean outputsReady) {
-    }
+      for (int var4 = 0; var4 < Integer.MAX_VALUE; var4++) {
+         if (getRecipeMaxEu(var0, var1, var4) == var2) {
+            return var4;
+         }
+      }
+
+      return 0;
+   }
+
+   private static long saturatedMultiply(long var0, long var2) {
+      if (var0 == 0L || var2 == 0L) {
+         return 0L;
+      } else {
+         return var0 > Long.MAX_VALUE / var2 ? Long.MAX_VALUE : var0 * var2;
+      }
+   }
+
+   private static long saturatedAdd(long var0, long var2) {
+      return Long.MAX_VALUE - var0 < var2 ? Long.MAX_VALUE : var0 + var2;
+   }
+
+   private static long divideCeil(long var0, int var2) {
+      return var0 == 0L ? 0L : 1L + (var0 - 1L) / var2;
+   }
+
+   public void writeNbt(CompoundTag var1, HolderLookup.Provider var2) {
+      CompoundTag var3 = new CompoundTag();
+      var3.putInt("version", 2);
+      var3.putInt("fairnessCursor", this.fairnessCursor);
+      ListTag var4 = new ListTag();
+
+      for (CrossThreadRecipeManager.RecipeThreadState var6 : this.states.values()) {
+         if (var6.recipeId != null || var6.hasWork() || var6.efficiencyTicks != 0) {
+            CompoundTag var7 = new CompoundTag();
+            var7.putString("room", var6.roomId);
+            if (var6.recipeId != null) {
+               var7.putString("recipe", var6.recipeId.toString());
+            }
+
+            var7.putInt("parallel", var6.parallel);
+            var7.putDouble("energyFactor", var6.energyFactor);
+            var7.putLong("usedEnergy", var6.usedEnergy);
+            var7.putLong("totalEnergy", var6.totalEnergy);
+            var7.putInt("efficiencyTicks", var6.efficiencyTicks);
+            var7.putInt("maxEfficiencyTicks", var6.maxEfficiencyTicks);
+            var7.putBoolean("running", var6.running);
+            var7.putBoolean("outputsReady", var6.outputsReady);
+            var7.put("itemOutputs", writeItems(var6.heldItemOutputs, var2));
+            var7.put("fluidOutputs", writeFluids(var6.heldFluidOutputs, var2));
+            var4.add(var7);
+         }
+      }
+
+      var3.put("threads", var4);
+      var1.put("aeindCrossThreadRecipes", var3);
+   }
+
+   public void readNbt(CompoundTag var1, HolderLookup.Provider var2) {
+      this.states.clear();
+      if (var1.contains("aeindCrossThreadRecipes", 10)) {
+         CompoundTag var3 = var1.getCompound("aeindCrossThreadRecipes");
+         this.fairnessCursor = var3.getInt("fairnessCursor");
+         ListTag var4 = var3.getList("threads", 10);
+
+         for (int var5 = 0; var5 < var4.size(); var5++) {
+            CompoundTag var6 = var4.getCompound(var5);
+            String var7 = var6.getString("room");
+            if (!var7.isEmpty()) {
+               CrossThreadRecipeManager.RecipeThreadState var8 = new CrossThreadRecipeManager.RecipeThreadState(var7);
+               var8.recipeId = var6.contains("recipe") ? ResourceLocation.tryParse(var6.getString("recipe")) : null;
+               var8.parallel = Math.max(1, var6.getInt("parallel"));
+               double var9 = var6.contains("energyFactor", 6) ? var6.getDouble("energyFactor") : var8.parallel;
+               var8.energyFactor = Double.isFinite(var9) && var9 >= 1.0 ? var9 : var8.parallel;
+               var8.usedEnergy = Math.max(0L, var6.getLong("usedEnergy"));
+               var8.totalEnergy = Math.max(0L, var6.getLong("totalEnergy"));
+               var8.efficiencyTicks = Math.max(0, var6.getInt("efficiencyTicks"));
+               var8.maxEfficiencyTicks = Math.max(0, var6.getInt("maxEfficiencyTicks"));
+               var8.running = var6.getBoolean("running");
+               var8.outputsReady = var6.getBoolean("outputsReady");
+               var8.heldItemOutputs = readItems(var6.getList("itemOutputs", 10), var2);
+               var8.heldFluidOutputs = readFluids(var6.getList("fluidOutputs", 10), var2);
+               this.states.put(var7, var8);
+            }
+         }
+      }
+   }
+
+   private static ListTag writeItems(List<ConfigurableItemStack> var0, HolderLookup.Provider var1) {
+      ListTag var2 = new ListTag();
+
+      for (ConfigurableItemStack var4 : var0) {
+         var2.add(var4.toNbt(var1));
+      }
+
+      return var2;
+   }
+
+   private static ListTag writeFluids(List<ConfigurableFluidStack> var0, HolderLookup.Provider var1) {
+      ListTag var2 = new ListTag();
+
+      for (ConfigurableFluidStack var4 : var0) {
+         var2.add(var4.toNbt(var1));
+      }
+
+      return var2;
+   }
+
+   private static List<ConfigurableItemStack> readItems(ListTag var0, HolderLookup.Provider var1) {
+      ArrayList<ConfigurableItemStack> var2 = new ArrayList<>();
+
+      for (int var3 = 0; var3 < var0.size(); var3++) {
+         var2.add(new ConfigurableItemStack(var0.getCompound(var3), var1));
+      }
+
+      return var2;
+   }
+
+   private static List<ConfigurableFluidStack> readFluids(ListTag var0, HolderLookup.Provider var1) {
+      ArrayList<ConfigurableFluidStack> var2 = new ArrayList<>();
+
+      for (int var3 = 0; var3 < var0.size(); var3++) {
+         var2.add(new ConfigurableFluidStack(var0.getCompound(var3), var1));
+      }
+
+      return var2;
+   }
+
+   public record ProgressSnapshot(List<CrossThreadRecipeManager.ThreadProgress> threads) {
+   }
+
+   private static final class RecipeThreadState {
+      private final String roomId;
+      private ResourceLocation recipeId;
+      private int parallel = 1;
+      private double energyFactor = 1.0;
+      private long usedEnergy;
+      private long totalEnergy;
+      private int efficiencyTicks;
+      private int maxEfficiencyTicks;
+      private boolean running;
+      private boolean outputsReady;
+      private List<ConfigurableItemStack> heldItemOutputs = new ArrayList<>();
+      private List<ConfigurableFluidStack> heldFluidOutputs = new ArrayList<>();
+
+      private RecipeThreadState(String var1) {
+         this.roomId = var1;
+      }
+
+      private boolean isRunning() {
+         return this.running;
+      }
+
+      private boolean hasWork() {
+         return this.running || this.outputsReady;
+      }
+   }
+
+   public record ThreadProgress(float progress, int parallel, boolean outputsReady) {
+   }
 }

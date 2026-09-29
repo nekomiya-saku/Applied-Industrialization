@@ -1,31 +1,10 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.minecraft.data.DataGenerator
- *  net.minecraft.data.DataProvider
- *  net.minecraft.data.PackOutput
- *  net.minecraft.data.loot.LootTableProvider
- *  net.minecraft.data.loot.LootTableProvider$SubProviderEntry
- *  net.minecraft.world.level.storage.loot.parameters.LootContextParamSets
- *  net.neoforged.bus.api.SubscribeEvent
- *  net.neoforged.fml.common.EventBusSubscriber
- *  net.neoforged.neoforge.common.data.ExistingFileHelper
- *  net.neoforged.neoforge.data.event.GatherDataEvent
- */
 package aeind.datagen;
 
-import aeind.datagen.ModBlockLootTableProvider;
-import aeind.datagen.ModBlockStateProvider;
-import aeind.datagen.ModBlockTagsProvider;
-import aeind.datagen.ModItemModelProvider;
-import aeind.datagen.ModItemTagsProvider;
-import aeind.datagen.ModRecipeProvider;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.data.DataGenerator;
-import net.minecraft.data.DataProvider;
 import net.minecraft.data.PackOutput;
 import net.minecraft.data.loot.LootTableProvider;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
@@ -34,21 +13,25 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.data.ExistingFileHelper;
 import net.neoforged.neoforge.data.event.GatherDataEvent;
 
-@EventBusSubscriber(modid="aeind")
+@EventBusSubscriber(modid = "aeind")
 public class DataGenerators {
-    @SubscribeEvent
-    public static void gatherData(GatherDataEvent gatherDataEvent) {
-        DataGenerator dataGenerator = gatherDataEvent.getGenerator();
-        PackOutput packOutput = dataGenerator.getPackOutput();
-        ExistingFileHelper existingFileHelper = gatherDataEvent.getExistingFileHelper();
-        CompletableFuture completableFuture = gatherDataEvent.getLookupProvider();
-        dataGenerator.addProvider(gatherDataEvent.includeClient(), (DataProvider)new ModBlockStateProvider(packOutput, existingFileHelper));
-        dataGenerator.addProvider(gatherDataEvent.includeClient(), (DataProvider)new ModItemModelProvider(packOutput, existingFileHelper));
-        dataGenerator.addProvider(gatherDataEvent.includeServer(), (DataProvider)new LootTableProvider(packOutput, Set.of(), List.of(new LootTableProvider.SubProviderEntry(ModBlockLootTableProvider::new, LootContextParamSets.BLOCK)), completableFuture));
-        ModBlockTagsProvider modBlockTagsProvider = new ModBlockTagsProvider(packOutput, completableFuture, existingFileHelper);
-        dataGenerator.addProvider(gatherDataEvent.includeServer(), (DataProvider)modBlockTagsProvider);
-        dataGenerator.addProvider(gatherDataEvent.includeServer(), (DataProvider)new ModItemTagsProvider(packOutput, completableFuture, modBlockTagsProvider.contentsGetter(), existingFileHelper));
-        dataGenerator.addProvider(gatherDataEvent.includeServer(), (DataProvider)new ModRecipeProvider(packOutput, completableFuture));
-    }
+   @SubscribeEvent
+   public static void gatherData(GatherDataEvent var0) {
+      DataGenerator var1 = var0.getGenerator();
+      PackOutput var2 = var1.getPackOutput();
+      ExistingFileHelper var3 = var0.getExistingFileHelper();
+      CompletableFuture<HolderLookup.Provider> var4 = var0.getLookupProvider();
+      var1.addProvider(var0.includeClient(), new ModBlockStateProvider(var2, var3));
+      var1.addProvider(var0.includeClient(), new ModItemModelProvider(var2, var3));
+      var1.addProvider(
+         var0.includeServer(),
+         new LootTableProvider(
+            var2, Set.of(), List.of(new LootTableProvider.SubProviderEntry(ModBlockLootTableProvider::new, LootContextParamSets.BLOCK)), var4
+         )
+      );
+      ModBlockTagsProvider var5 = new ModBlockTagsProvider(var2, var4, var3);
+      var1.addProvider(var0.includeServer(), var5);
+      var1.addProvider(var0.includeServer(), new ModItemTagsProvider(var2, var4, var5.contentsGetter(), var3));
+      var1.addProvider(var0.includeServer(), new ModRecipeProvider(var2, var4));
+   }
 }
-

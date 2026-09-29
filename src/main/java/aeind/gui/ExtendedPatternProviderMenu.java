@@ -1,12 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  appeng.helpers.patternprovider.PatternProviderLogicHost
- *  appeng.menu.implementations.PatternProviderMenu
- *  net.minecraft.world.entity.player.Inventory
- *  net.minecraft.world.inventory.MenuType
- */
 package aeind.gui;
 
 import appeng.helpers.patternprovider.PatternProviderLogicHost;
@@ -15,19 +6,17 @@ import aeind.blockentity.ExtendedPatternInputHatchBlockEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.MenuType;
 
-public class ExtendedPatternProviderMenu
-extends PatternProviderMenu {
-    private final ExtendedPatternInputHatchBlockEntity hatch;
+public class ExtendedPatternProviderMenu extends PatternProviderMenu {
+   private final ExtendedPatternInputHatchBlockEntity hatch;
 
-    public ExtendedPatternProviderMenu(MenuType<? extends PatternProviderMenu> menuType, int n, Inventory inventory, PatternProviderLogicHost patternProviderLogicHost) {
-        super(menuType, n, inventory, patternProviderLogicHost);
-        this.hatch = (ExtendedPatternInputHatchBlockEntity)patternProviderLogicHost;
-    }
+   public ExtendedPatternProviderMenu(MenuType<? extends PatternProviderMenu> var1, int var2, Inventory var3, PatternProviderLogicHost var4) {
+      super(var1, var2, var3, var4);
+      this.hatch = (ExtendedPatternInputHatchBlockEntity)var4;
+   }
 
-    public void returnMaterial() {
-        if (this.hatch != null) {
-            this.hatch.returnAllBufferToNetwork();
-        }
-    }
+   public void returnMaterial() {
+      if (this.hatch != null) {
+         this.hatch.returnAllBufferToNetwork();
+      }
+   }
 }
-

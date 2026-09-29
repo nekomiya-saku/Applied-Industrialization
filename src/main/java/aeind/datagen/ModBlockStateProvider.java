@@ -1,32 +1,22 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.minecraft.data.PackOutput
- *  net.minecraft.world.level.block.Block
- *  net.neoforged.neoforge.client.model.generators.BlockStateProvider
- *  net.neoforged.neoforge.common.data.ExistingFileHelper
- */
 package aeind.datagen;
 
 import aeind.block.ModBlocks;
 import net.minecraft.data.PackOutput;
-import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.client.model.generators.BlockStateProvider;
 import net.neoforged.neoforge.common.data.ExistingFileHelper;
 
-public class ModBlockStateProvider
-extends BlockStateProvider {
-    public ModBlockStateProvider(PackOutput packOutput, ExistingFileHelper existingFileHelper) {
-        super(packOutput, "aeind", existingFileHelper);
-    }
+public class ModBlockStateProvider extends BlockStateProvider {
+   public ModBlockStateProvider(PackOutput var1, ExistingFileHelper var2) {
+      super(var1, "aeind", var2);
+   }
 
-    protected void registerStatesAndModels() {
-        this.simpleBlockWithItem((Block)ModBlocks.ADVANCED_PATTERN_INPUT_HATCH.get(), this.cubeAll((Block)ModBlocks.ADVANCED_PATTERN_INPUT_HATCH.get()));
-        if (ModBlocks.ADVANCED_EXTENDED_PATTERN_INPUT_HATCH != null) {
-            this.simpleBlockWithItem((Block)ModBlocks.ADVANCED_EXTENDED_PATTERN_INPUT_HATCH.get(), this.cubeAll((Block)ModBlocks.ADVANCED_EXTENDED_PATTERN_INPUT_HATCH.get()));
-        }
-        this.simpleBlockWithItem((Block)ModBlocks.ME_OUTPUT_HATCH.get(), this.cubeAll((Block)ModBlocks.ME_OUTPUT_HATCH.get()));
-    }
+   @Override
+   protected void registerStatesAndModels() {
+      this.simpleBlockWithItem(ModBlocks.ADVANCED_PATTERN_INPUT_HATCH.get(), this.cubeAll(ModBlocks.ADVANCED_PATTERN_INPUT_HATCH.get()));
+      if (ModBlocks.ADVANCED_EXTENDED_PATTERN_INPUT_HATCH != null) {
+         this.simpleBlockWithItem(ModBlocks.ADVANCED_EXTENDED_PATTERN_INPUT_HATCH.get(), this.cubeAll(ModBlocks.ADVANCED_EXTENDED_PATTERN_INPUT_HATCH.get()));
+      }
+
+      this.simpleBlockWithItem(ModBlocks.ME_OUTPUT_HATCH.get(), this.cubeAll(ModBlocks.ME_OUTPUT_HATCH.get()));
+   }
 }
-

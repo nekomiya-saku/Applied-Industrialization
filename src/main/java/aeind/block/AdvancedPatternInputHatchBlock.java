@@ -1,38 +1,6 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  appeng.menu.MenuOpener
- *  appeng.menu.locator.MenuHostLocator
- *  appeng.menu.locator.MenuLocators
- *  com.mojang.serialization.MapCodec
- *  net.minecraft.ChatFormatting
- *  net.minecraft.core.BlockPos
- *  net.minecraft.core.component.DataComponents
- *  net.minecraft.network.chat.Component
- *  net.minecraft.server.level.ServerPlayer
- *  net.minecraft.world.Containers
- *  net.minecraft.world.InteractionResult
- *  net.minecraft.world.entity.LivingEntity
- *  net.minecraft.world.entity.player.Player
- *  net.minecraft.world.inventory.MenuType
- *  net.minecraft.world.item.ItemStack
- *  net.minecraft.world.level.Level
- *  net.minecraft.world.level.block.BaseEntityBlock
- *  net.minecraft.world.level.block.RenderShape
- *  net.minecraft.world.level.block.entity.BlockEntity
- *  net.minecraft.world.level.block.entity.BlockEntityTicker
- *  net.minecraft.world.level.block.entity.BlockEntityType
- *  net.minecraft.world.level.block.state.BlockBehaviour$Properties
- *  net.minecraft.world.level.block.state.BlockState
- *  net.minecraft.world.level.material.FluidState
- *  net.minecraft.world.phys.BlockHitResult
- *  org.jetbrains.annotations.Nullable
- */
 package aeind.block;
 
 import appeng.menu.MenuOpener;
-import appeng.menu.locator.MenuHostLocator;
 import appeng.menu.locator.MenuLocators;
 import aeind.blockentity.AdvancedPatternInputHatchBlockEntity;
 import aeind.blockentity.MEPatternInputHatchBlockEntity;
@@ -48,7 +16,6 @@ import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -62,74 +29,74 @@ import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
-public class AdvancedPatternInputHatchBlock
-extends BaseEntityBlock {
-    public static final MapCodec<AdvancedPatternInputHatchBlock> CODEC = AdvancedPatternInputHatchBlock.simpleCodec(AdvancedPatternInputHatchBlock::new);
+public class AdvancedPatternInputHatchBlock extends BaseEntityBlock {
+   public static final MapCodec<AdvancedPatternInputHatchBlock> CODEC = simpleCodec(AdvancedPatternInputHatchBlock::new);
 
-    public AdvancedPatternInputHatchBlock(BlockBehaviour.Properties properties) {
-        super(properties);
-    }
+   public AdvancedPatternInputHatchBlock(BlockBehaviour.Properties var1) {
+      super(var1);
+   }
 
-    public MapCodec<AdvancedPatternInputHatchBlock> codec() {
-        return CODEC;
-    }
+   @Override
+   public MapCodec<AdvancedPatternInputHatchBlock> codec() {
+      return CODEC;
+   }
 
-    public BlockEntity newBlockEntity(BlockPos blockPos, BlockState blockState) {
-        return new AdvancedPatternInputHatchBlockEntity(blockPos, blockState);
-    }
+   @Override
+   public BlockEntity newBlockEntity(BlockPos var1, BlockState var2) {
+      return new AdvancedPatternInputHatchBlockEntity(var1, var2);
+   }
 
-    protected RenderShape getRenderShape(BlockState blockState) {
-        return RenderShape.MODEL;
-    }
+   @Override
+   protected RenderShape getRenderShape(BlockState var1) {
+      return RenderShape.MODEL;
+   }
 
-    public void setPlacedBy(Level level, BlockPos blockPos, BlockState blockState, @Nullable LivingEntity livingEntity, ItemStack itemStack) {
-        BlockEntity blockEntity;
-        super.setPlacedBy(level, blockPos, blockState, livingEntity, itemStack);
-        Component component = (Component)itemStack.get(DataComponents.CUSTOM_NAME);
-        if (component != null && (blockEntity = level.getBlockEntity(blockPos)) instanceof AdvancedPatternInputHatchBlockEntity) {
-            AdvancedPatternInputHatchBlockEntity advancedPatternInputHatchBlockEntity = (AdvancedPatternInputHatchBlockEntity)blockEntity;
-            advancedPatternInputHatchBlockEntity.setCustomName(component);
-        }
-    }
+   @Override
+   public void setPlacedBy(Level var1, BlockPos var2, BlockState var3, @Nullable LivingEntity var4, ItemStack var5) {
+      super.setPlacedBy(var1, var2, var3, var4, var5);
+      Component var6 = var5.get(DataComponents.CUSTOM_NAME);
+      if (var6 != null && var1.getBlockEntity(var2) instanceof AdvancedPatternInputHatchBlockEntity var7) {
+         var7.setCustomName(var6);
+      }
+   }
 
-    protected InteractionResult useWithoutItem(BlockState blockState, Level level, BlockPos blockPos, Player player, BlockHitResult blockHitResult) {
-        if (!level.isClientSide && player instanceof ServerPlayer) {
-            ServerPlayer serverPlayer = (ServerPlayer)player;
-            BlockEntity blockEntity = level.getBlockEntity(blockPos);
-            if (blockEntity instanceof AdvancedPatternInputHatchBlockEntity) {
-                AdvancedPatternInputHatchBlockEntity advancedPatternInputHatchBlockEntity = (AdvancedPatternInputHatchBlockEntity)blockEntity;
-                MenuOpener.open((MenuType)((MenuType)ModMenuTypes.ADVANCED_PATTERN_INPUT_HATCH.get()), (Player)serverPlayer, (MenuHostLocator)MenuLocators.forBlockEntity((BlockEntity)advancedPatternInputHatchBlockEntity));
-            }
-        }
-        return InteractionResult.sidedSuccess((boolean)level.isClientSide);
-    }
+   @Override
+   protected InteractionResult useWithoutItem(BlockState var1, Level var2, BlockPos var3, Player var4, BlockHitResult var5) {
+      if (!var2.isClientSide && var4 instanceof ServerPlayer var6 && var2.getBlockEntity(var3) instanceof AdvancedPatternInputHatchBlockEntity var7) {
+         MenuOpener.open(ModMenuTypes.ADVANCED_PATTERN_INPUT_HATCH.get(), var6, MenuLocators.forBlockEntity(var7));
+      }
 
-    protected void onRemove(BlockState blockState, Level level, BlockPos blockPos, BlockState blockState2, boolean bl) {
-        BlockEntity blockEntity;
-        if (!blockState.is(blockState2.getBlock()) && (blockEntity = level.getBlockEntity(blockPos)) instanceof AdvancedPatternInputHatchBlockEntity) {
-            AdvancedPatternInputHatchBlockEntity advancedPatternInputHatchBlockEntity = (AdvancedPatternInputHatchBlockEntity)blockEntity;
-            advancedPatternInputHatchBlockEntity.returnAllBufferToNetwork();
-            Containers.dropContents((Level)level, (BlockPos)blockPos, advancedPatternInputHatchBlockEntity.getDropItems());
-        }
-        super.onRemove(blockState, level, blockPos, blockState2, bl);
-    }
+      return InteractionResult.sidedSuccess(var2.isClientSide);
+   }
 
-    public boolean onDestroyedByPlayer(BlockState blockState, Level level, BlockPos blockPos, Player player, boolean bl, FluidState fluidState) {
-        AdvancedPatternInputHatchBlockEntity advancedPatternInputHatchBlockEntity;
-        BlockEntity blockEntity;
-        if (!level.isClientSide && (blockEntity = level.getBlockEntity(blockPos)) instanceof AdvancedPatternInputHatchBlockEntity && (advancedPatternInputHatchBlockEntity = (AdvancedPatternInputHatchBlockEntity)blockEntity).hasStoredMaterials() && !player.isShiftKeyDown()) {
-            player.sendSystemMessage((Component)Component.literal((String)"\u4f60\u6b63\u5728\u5c1d\u8bd5\u7834\u574f\u9ad8\u7ea7\u6837\u677f\u8f93\u5165\u4ed3\uff0c\u8bf7\u5148\u4fdd\u8bc1 AE \u7f51\u7edc\u6709\u8db3\u591f\u5bb9\u91cf\u63a5\u6536\u7f13\u5b58\u6750\u6599\uff1b\u786e\u8ba4\u540e\u6f5c\u884c\u7834\u574f\u3002").withStyle(ChatFormatting.RED));
-            return false;
-        }
-        return super.onDestroyedByPlayer(blockState, level, blockPos, player, bl, fluidState);
-    }
+   @Override
+   protected void onRemove(BlockState var1, Level var2, BlockPos var3, BlockState var4, boolean var5) {
+      if (!var1.is(var4.getBlock()) && var2.getBlockEntity(var3) instanceof AdvancedPatternInputHatchBlockEntity var6) {
+         var6.returnAllBufferToNetwork();
+         Containers.dropContents(var2, var3, var6.getDropItems());
+      }
 
-    @Nullable
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState blockState, BlockEntityType<T> blockEntityType) {
-        if (level.isClientSide) {
-            return null;
-        }
-        return AdvancedPatternInputHatchBlock.createTickerHelper(blockEntityType, (BlockEntityType)((BlockEntityType)ModBlockEntities.ADVANCED_PATTERN_INPUT_HATCH.get()), MEPatternInputHatchBlockEntity::serverTick);
-    }
+      super.onRemove(var1, var2, var3, var4, var5);
+   }
+
+   @Override
+   public boolean onDestroyedByPlayer(BlockState var1, Level var2, BlockPos var3, Player var4, boolean var5, FluidState var6) {
+      if (!var2.isClientSide
+         && var2.getBlockEntity(var3) instanceof AdvancedPatternInputHatchBlockEntity var7
+         && var7.hasStoredMaterials()
+         && !var4.isShiftKeyDown()) {
+         var4.sendSystemMessage(Component.literal("你正在尝试破坏高级样板输入仓，请先保证 AE 网络有足够容量接收缓存材料；确认后潜行破坏。").withStyle(ChatFormatting.RED));
+         return false;
+      } else {
+         return super.onDestroyedByPlayer(var1, var2, var3, var4, var5, var6);
+      }
+   }
+
+   @Nullable
+   @Override
+   public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level var1, BlockState var2, BlockEntityType<T> var3) {
+      return var1.isClientSide
+         ? null
+         : createTickerHelper(var3, ModBlockEntities.ADVANCED_PATTERN_INPUT_HATCH.get(), MEPatternInputHatchBlockEntity::serverTick);
+   }
 }
-

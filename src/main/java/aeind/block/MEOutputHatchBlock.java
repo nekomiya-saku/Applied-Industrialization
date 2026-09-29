@@ -1,28 +1,8 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.mojang.serialization.MapCodec
- *  net.minecraft.core.BlockPos
- *  net.minecraft.core.NonNullList
- *  net.minecraft.world.Containers
- *  net.minecraft.world.item.ItemStack
- *  net.minecraft.world.level.Level
- *  net.minecraft.world.level.block.BaseEntityBlock
- *  net.minecraft.world.level.block.RenderShape
- *  net.minecraft.world.level.block.entity.BlockEntity
- *  net.minecraft.world.level.block.entity.BlockEntityTicker
- *  net.minecraft.world.level.block.entity.BlockEntityType
- *  net.minecraft.world.level.block.state.BlockBehaviour$Properties
- *  net.minecraft.world.level.block.state.BlockState
- *  org.jetbrains.annotations.Nullable
- */
 package aeind.block;
 
 import aeind.blockentity.MEOutputHatchBlockEntity;
 import aeind.blockentity.ModBlockEntities;
 import com.mojang.serialization.MapCodec;
-import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.world.Containers;
@@ -37,44 +17,45 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
-public class MEOutputHatchBlock
-extends BaseEntityBlock {
-    public static final MapCodec<MEOutputHatchBlock> CODEC = MEOutputHatchBlock.simpleCodec(MEOutputHatchBlock::new);
+public class MEOutputHatchBlock extends BaseEntityBlock {
+   public static final MapCodec<MEOutputHatchBlock> CODEC = simpleCodec(MEOutputHatchBlock::new);
 
-    public MEOutputHatchBlock(BlockBehaviour.Properties properties) {
-        super(properties);
-    }
+   public MEOutputHatchBlock(BlockBehaviour.Properties var1) {
+      super(var1);
+   }
 
-    public MapCodec<MEOutputHatchBlock> codec() {
-        return CODEC;
-    }
+   @Override
+   public MapCodec<MEOutputHatchBlock> codec() {
+      return CODEC;
+   }
 
-    @Nullable
-    public BlockEntity newBlockEntity(BlockPos blockPos, BlockState blockState) {
-        return new MEOutputHatchBlockEntity(blockPos, blockState);
-    }
+   @Nullable
+   @Override
+   public BlockEntity newBlockEntity(BlockPos var1, BlockState var2) {
+      return new MEOutputHatchBlockEntity(var1, var2);
+   }
 
-    protected RenderShape getRenderShape(BlockState blockState) {
-        return RenderShape.MODEL;
-    }
+   @Override
+   protected RenderShape getRenderShape(BlockState var1) {
+      return RenderShape.MODEL;
+   }
 
-    protected void onRemove(BlockState blockState, Level level, BlockPos blockPos, BlockState blockState2, boolean bl) {
-        BlockEntity blockEntity;
-        if (!blockState.is(blockState2.getBlock()) && (blockEntity = level.getBlockEntity(blockPos)) instanceof MEOutputHatchBlockEntity) {
-            MEOutputHatchBlockEntity mEOutputHatchBlockEntity = (MEOutputHatchBlockEntity)blockEntity;
-            NonNullList nonNullList = NonNullList.create();
-            mEOutputHatchBlockEntity.addOutputDrops((List<ItemStack>)nonNullList);
-            Containers.dropContents((Level)level, (BlockPos)blockPos, (NonNullList)nonNullList);
-        }
-        super.onRemove(blockState, level, blockPos, blockState2, bl);
-    }
+   @Override
+   protected void onRemove(BlockState var1, Level var2, BlockPos var3, BlockState var4, boolean var5) {
+      BlockEntity var6;
+      if (!var1.is(var4.getBlock()) && (var6 = var2.getBlockEntity(var3)) instanceof MEOutputHatchBlockEntity) {
+         MEOutputHatchBlockEntity var7 = (MEOutputHatchBlockEntity)var6;
+         NonNullList<ItemStack> var8 = NonNullList.create();
+         var7.addOutputDrops(var8);
+         Containers.dropContents(var2, var3, var8);
+      }
 
-    @Nullable
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState blockState, BlockEntityType<T> blockEntityType) {
-        if (level.isClientSide) {
-            return null;
-        }
-        return MEOutputHatchBlock.createTickerHelper(blockEntityType, (BlockEntityType)((BlockEntityType)ModBlockEntities.ME_OUTPUT_HATCH.get()), MEOutputHatchBlockEntity::serverTick);
-    }
+      super.onRemove(var1, var2, var3, var4, var5);
+   }
+
+   @Nullable
+   @Override
+   public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level var1, BlockState var2, BlockEntityType<T> var3) {
+      return var1.isClientSide ? null : createTickerHelper(var3, ModBlockEntities.ME_OUTPUT_HATCH.get(), MEOutputHatchBlockEntity::serverTick);
+   }
 }
-

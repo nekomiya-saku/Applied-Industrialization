@@ -1,20 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  aztech.modern_industrialization.machines.MachineBlockEntity
- *  aztech.modern_industrialization.machines.components.OverdriveComponent
- *  net.minecraft.world.InteractionHand
- *  net.minecraft.world.ItemInteractionResult
- *  net.minecraft.world.entity.player.Player
- *  net.minecraft.world.item.ItemStack
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Shadow
- *  org.spongepowered.asm.mixin.injection.At
- *  org.spongepowered.asm.mixin.injection.Inject
- *  org.spongepowered.asm.mixin.injection.callback.CallbackInfo
- *  org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable
- */
 package aeind.mixin;
 
 import aztech.modern_industrialization.machines.MachineBlockEntity;
@@ -32,31 +15,29 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(value={OverdriveComponent.class})
-public abstract class OverdriveComponentMixin
-implements OverdriveComponentAccess {
-    @Shadow
-    private ItemStack overdriveModule;
+@Mixin(OverdriveComponent.class)
+public abstract class OverdriveComponentMixin implements OverdriveComponentAccess {
+   @Shadow
+   private ItemStack overdriveModule;
 
-    @Override
-    public void aeind$clear() {
-        this.overdriveModule = ItemStack.EMPTY;
-    }
+   @Override
+   public void aeind$clear() {
+      this.overdriveModule = ItemStack.EMPTY;
+   }
 
-    @Inject(method={"onUse"}, at={@At(value="HEAD")}, cancellable=true)
-    private void aeind$blockUse(MachineBlockEntity machineBlockEntity, Player player, InteractionHand interactionHand, CallbackInfoReturnable<ItemInteractionResult> callbackInfoReturnable) {
-        if (OverdriveBlocker.isBlocked(machineBlockEntity)) {
-            callbackInfoReturnable.setReturnValue((Object)ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION);
-        }
-    }
+   @Inject(method = "onUse", at = @At("HEAD"), cancellable = true)
+   private void aeind$blockUse(MachineBlockEntity var1, Player var2, InteractionHand var3, CallbackInfoReturnable<ItemInteractionResult> var4) {
+      if (OverdriveBlocker.isBlocked(var1)) {
+         var4.setReturnValue(ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION);
+      }
+   }
 
-    @Inject(method={"setStackServer"}, at={@At(value="HEAD")}, cancellable=true)
-    private void aeind$blockSlotWrite(MachineBlockEntity machineBlockEntity, ItemStack itemStack, CallbackInfo callbackInfo) {
-        if (OverdriveBlocker.isBlocked(machineBlockEntity)) {
-            this.aeind$clear();
-            machineBlockEntity.setChanged();
-            callbackInfo.cancel();
-        }
-    }
+   @Inject(method = "setStackServer", at = @At("HEAD"), cancellable = true)
+   private void aeind$blockSlotWrite(MachineBlockEntity var1, ItemStack var2, CallbackInfo var3) {
+      if (OverdriveBlocker.isBlocked(var1)) {
+         this.aeind$clear();
+         var1.setChanged();
+         var3.cancel();
+      }
+   }
 }
-
