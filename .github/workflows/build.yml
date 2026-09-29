@@ -1,0 +1,77 @@
+name: Build Applied Industrialization
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  MOD_VERSION: 1.2.7
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Download compile-only dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p libs
+
+          curl --fail --location --retry 3 \
+            --output libs/appliedenergistics2-19.2.17.jar \
+            https://cdn.modrinth.com/data/XxWD5pD3/versions/kfyIqgJ6/appliedenergistics2-19.2.17.jar
+          curl --fail --location --retry 3 \
+            --output libs/Modern-Industrialization-2.5.6.jar \
+            https://cdn.modrinth.com/data/Gov5Dboq/versions/E1nD4PKl/Modern-Industrialization-2.5.6.jar
+          curl --fail --location --retry 3 \
+            --output libs/Jade-1.21.1-NeoForge-15.10.6.jar \
+            https://cdn.modrinth.com/data/nvQzSEkH/versions/eYz2YBGT/Jade-1.21.1-NeoForge-15.10.6.jar
+
+          printf '%s  %s\n' \
+            55edfd948366aff620881e0625e48c333a2cb847e73249bc0b588efbc4b86709992a8ffbca97ea387e270df4186fe7f74ee2f27b739f1c952e932becfb9dea33 \
+            libs/appliedenergistics2-19.2.17.jar | sha512sum --check --status
+          printf '%s  %s\n' \
+            ee98da11ae52892e5ce60ef87367bf681b3c8e2184200337a64cc71e16133ae1cabb2dd4016e6dd200b476d6d7378aed0f82fa65026150e63aec0ff09bac3b3a \
+            libs/Modern-Industrialization-2.5.6.jar | sha512sum --check --status
+          printf '%s  %s\n' \
+            dad9755dce8d85d914fc4df2baa0211f13e5839a71c1925fdd01f69081a95e30a2934e6273f8b01f0169adebe7a9dae57a8d904de0c4cb36dc17369bb474f0f2 \
+            libs/Jade-1.21.1-NeoForge-15.10.6.jar | sha512sum --check --status
+
+      - name: Build mod JAR
+        shell: bash
+        run: |
+          chmod +x ./gradlew
+          ./gradlew build --no-daemon --stacktrace
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: applied-industrialization-${{ env.MOD_VERSION }}-${{ github.sha }}
+          path: build/libs/*.jar
+          if-no-files-found: error
+
+      - name: Publish JAR release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.MOD_VERSION }}
+          name: Applied Industrialization v${{ env.MOD_VERSION }}
+          generate_release_notes: true
+          files: build/libs/*-${{ env.MOD_VERSION }}.jar
