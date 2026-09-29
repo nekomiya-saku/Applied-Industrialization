@@ -1,7 +1,7 @@
 {
     "required": true,
     "minVersion": "0.8.5",
-    "package": "cn.autoforged.me_pattern_input_hatch_mod_1786194568.mixin",
+    "package": "aeind.mixin",
     "compatibilityLevel": "JAVA_21",
     "mixins": [
         "ConfigurableItemStackMixin",
