@@ -22,6 +22,7 @@
   "jade.aeind.online": "设备在线",
   "jade.aeind.offline": "设备离线",
   "jade.aeind.cross_thread_parallel": "%s实时线程，每线程%s并行",
+  "jade.aeind.input_room": "隔离仓室 %s",
   "button.aeind.return_material.label": "↺",
   "button.aeind.return_material.tooltip": "原料返回:将仓内缓存的原料退回 AE 网络",
   "entity.productivebees.stainless_steel_bee": "不锈钢蜜蜂",

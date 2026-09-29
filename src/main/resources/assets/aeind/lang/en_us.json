@@ -22,6 +22,7 @@
   "jade.aeind.online": "Device Online",
   "jade.aeind.offline": "Device Offline",
   "jade.aeind.cross_thread_parallel": "%s real-time threads, %s parallel per thread",
+  "jade.aeind.input_room": "Isolated Room %s",
   "button.aeind.return_material.label": "↺",
   "button.aeind.return_material.tooltip": "Return material: send buffered raw materials back to the AE network",
   "entity.productivebees.stainless_steel_bee": "Stainless Steel Bee",
