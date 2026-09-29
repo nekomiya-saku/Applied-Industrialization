@@ -35,13 +35,19 @@ jobs:
           set -euo pipefail
           mkdir -p libs
 
-          curl --fail --location --retry 3 \
+          curl --fail --show-error --location --retry 5 --retry-all-errors \
+            --connect-timeout 30 --max-time 300 \
+            --user-agent "Applied-Industrialization-CI/1.2.7" \
             --output libs/appliedenergistics2-19.2.17.jar \
             https://cdn.modrinth.com/data/XxWD5pD3/versions/kfyIqgJ6/appliedenergistics2-19.2.17.jar
-          curl --fail --location --retry 3 \
+          curl --fail --show-error --location --retry 5 --retry-all-errors \
+            --connect-timeout 30 --max-time 300 \
+            --user-agent "Applied-Industrialization-CI/1.2.7" \
             --output libs/Modern-Industrialization-2.5.6.jar \
             https://cdn.modrinth.com/data/Gov5Dboq/versions/E1nD4PKl/Modern-Industrialization-2.5.6.jar
-          curl --fail --location --retry 3 \
+          curl --fail --show-error --location --retry 5 --retry-all-errors \
+            --connect-timeout 30 --max-time 300 \
+            --user-agent "Applied-Industrialization-CI/1.2.7" \
             --output libs/Jade-1.21.1-NeoForge-15.10.6.jar \
             https://cdn.modrinth.com/data/nvQzSEkH/versions/eYz2YBGT/Jade-1.21.1-NeoForge-15.10.6.jar
 
