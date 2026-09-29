@@ -4,7 +4,17 @@
     "package": "cn.autoforged.me_pattern_input_hatch_mod_1786194568.mixin",
     "compatibilityLevel": "JAVA_21",
     "mixins": [
-        "MachineComponentFluidsProviderMixin"
+        "ConfigurableItemStackMixin",
+        "MachineComponentFluidsProviderMixin",
+        "MultiblockInventoryComponentMixin",
+        "CrafterComponentMixin",
+        "MIParallelCrafterStatusMixin",
+        "CrafterComponentAccessor",
+        "AbstractCraftingMultiblockBlockEntityMixin",
+        "CraftingMultiblockProgressGuiMixin",
+        "MachineBlockEntityMixin",
+        "OverdriveComponentMixin",
+        "SlotPanelMixin"
     ],
     "client": [],
     "server": [],

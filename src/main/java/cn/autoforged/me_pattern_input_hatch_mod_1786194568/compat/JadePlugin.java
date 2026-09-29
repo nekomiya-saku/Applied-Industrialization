@@ -1,14 +1,19 @@
 /*
  * Decompiled with CFR 0.152.
- *
+ * 
  * Could not load the following classes:
  *  appeng.api.networking.IGridNode
  *  appeng.api.networking.IInWorldGridNodeHost
+ *  aztech.modern_industrialization.api.machine.component.InventoryAccess
+ *  aztech.modern_industrialization.api.machine.holder.MultiblockInventoryComponentHolder
+ *  aztech.modern_industrialization.machines.MachineBlock
+ *  aztech.modern_industrialization.machines.MachineBlockEntity
  *  net.minecraft.ChatFormatting
  *  net.minecraft.nbt.CompoundTag
  *  net.minecraft.network.chat.Component
  *  net.minecraft.resources.ResourceLocation
  *  net.minecraft.world.level.block.entity.BlockEntity
+ *  net.neoforged.fml.ModList
  *  snownee.jade.api.BlockAccessor
  *  snownee.jade.api.IBlockComponentProvider
  *  snownee.jade.api.IComponentProvider
@@ -24,18 +29,25 @@ package cn.autoforged.me_pattern_input_hatch_mod_1786194568.compat;
 
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.IInWorldGridNodeHost;
-import cn.autoforged.me_pattern_input_hatch_mod_1786194568.block.MEOutputHatchBlock;
-import cn.autoforged.me_pattern_input_hatch_mod_1786194568.block.MEPatternInputHatchBlock;
+import aztech.modern_industrialization.api.machine.component.InventoryAccess;
+import aztech.modern_industrialization.api.machine.holder.MultiblockInventoryComponentHolder;
+import aztech.modern_industrialization.machines.MachineBlock;
+import aztech.modern_industrialization.machines.MachineBlockEntity;
+import cn.autoforged.me_pattern_input_hatch_mod_1786194568.block.AdvancedPatternInputHatchBlock;
 import cn.autoforged.me_pattern_input_hatch_mod_1786194568.block.ExtendedPatternInputHatchBlock;
+import cn.autoforged.me_pattern_input_hatch_mod_1786194568.block.MEOutputHatchBlock;
+import cn.autoforged.me_pattern_input_hatch_mod_1786194568.blockentity.ExtendedPatternInputHatchBlockEntity;
 import cn.autoforged.me_pattern_input_hatch_mod_1786194568.blockentity.MEOutputHatchBlockEntity;
 import cn.autoforged.me_pattern_input_hatch_mod_1786194568.blockentity.MEPatternInputHatchBlockEntity;
-import cn.autoforged.me_pattern_input_hatch_mod_1786194568.blockentity.ExtendedPatternInputHatchBlockEntity;
-import net.neoforged.fml.ModList;
+import cn.autoforged.me_pattern_input_hatch_mod_1786194568.compat.MIParallelHatchCompat;
+import cn.autoforged.me_pattern_input_hatch_mod_1786194568.cross_thread.CrossThreadControllerAccess;
+import cn.autoforged.me_pattern_input_hatch_mod_1786194568.isolation.ThreadIsolationAccess;
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.neoforged.fml.ModList;
 import snownee.jade.api.BlockAccessor;
 import snownee.jade.api.IBlockComponentProvider;
 import snownee.jade.api.IComponentProvider;
@@ -51,6 +63,7 @@ import snownee.jade.api.config.IPluginConfig;
 public final class JadePlugin
 implements IWailaPlugin {
     private static final DeviceStatusProvider PROVIDER = new DeviceStatusProvider();
+    private static final CrossThreadStatusProvider CROSS_THREAD_PROVIDER = new CrossThreadStatusProvider();
 
     public void register(IWailaCommonRegistration iWailaCommonRegistration) {
         iWailaCommonRegistration.registerBlockDataProvider((IServerDataProvider)PROVIDER, MEPatternInputHatchBlockEntity.class);
@@ -58,14 +71,16 @@ implements IWailaPlugin {
         if (ModList.get().isLoaded("extendedae")) {
             iWailaCommonRegistration.registerBlockDataProvider((IServerDataProvider)PROVIDER, ExtendedPatternInputHatchBlockEntity.class);
         }
+        iWailaCommonRegistration.registerBlockDataProvider((IServerDataProvider)CROSS_THREAD_PROVIDER, MachineBlockEntity.class);
     }
 
     public void registerClient(IWailaClientRegistration iWailaClientRegistration) {
-        iWailaClientRegistration.registerBlockComponent((IComponentProvider)PROVIDER, MEPatternInputHatchBlock.class);
+        iWailaClientRegistration.registerBlockComponent((IComponentProvider)PROVIDER, AdvancedPatternInputHatchBlock.class);
         iWailaClientRegistration.registerBlockComponent((IComponentProvider)PROVIDER, MEOutputHatchBlock.class);
         if (ModList.get().isLoaded("extendedae")) {
             iWailaClientRegistration.registerBlockComponent((IComponentProvider)PROVIDER, ExtendedPatternInputHatchBlock.class);
         }
+        iWailaClientRegistration.registerBlockComponent((IComponentProvider)CROSS_THREAD_PROVIDER, MachineBlock.class);
     }
 
     private static final class DeviceStatusProvider
@@ -96,4 +111,49 @@ implements IWailaPlugin {
             compoundTag.putBoolean("ae2_active", bl);
         }
     }
+
+    private static final class CrossThreadStatusProvider
+    implements IBlockComponentProvider,
+    IServerDataProvider<BlockAccessor> {
+        private static final ResourceLocation UID = ResourceLocation.fromNamespaceAndPath((String)"aeind", (String)"cross_thread_status");
+        private static final String ENABLED = "aeind_cross_thread_enabled";
+        private static final String THREADS = "aeind_cross_thread_threads";
+        private static final String PER_THREAD_LIMIT = "aeind_cross_thread_per_thread_limit";
+
+        private CrossThreadStatusProvider() {
+        }
+
+        public ResourceLocation getUid() {
+            return UID;
+        }
+
+        public void appendTooltip(ITooltip iTooltip, BlockAccessor blockAccessor, IPluginConfig iPluginConfig) {
+            CompoundTag compoundTag = blockAccessor.getServerData();
+            if (compoundTag.getBoolean(ENABLED)) {
+                iTooltip.add((Component)Component.translatable((String)"jade.aeind.cross_thread_parallel", (Object[])new Object[]{compoundTag.getInt(THREADS), compoundTag.getInt(PER_THREAD_LIMIT)}).withStyle(ChatFormatting.GRAY));
+            }
+        }
+
+        public void appendServerData(CompoundTag compoundTag, BlockAccessor blockAccessor) {
+            ThreadIsolationAccess threadIsolationAccess;
+            CrossThreadControllerAccess crossThreadControllerAccess;
+            BlockEntity blockEntity;
+            block3: {
+                block2: {
+                    MultiblockInventoryComponentHolder multiblockInventoryComponentHolder;
+                    InventoryAccess inventoryAccess;
+                    blockEntity = blockAccessor.getBlockEntity();
+                    if (!(blockEntity instanceof CrossThreadControllerAccess)) break block2;
+                    crossThreadControllerAccess = (CrossThreadControllerAccess)blockEntity;
+                    if (blockEntity instanceof MultiblockInventoryComponentHolder && (inventoryAccess = (multiblockInventoryComponentHolder = (MultiblockInventoryComponentHolder)blockEntity).getMultiblockInventoryComponent()) instanceof ThreadIsolationAccess && (threadIsolationAccess = (ThreadIsolationAccess)inventoryAccess).aeind$crossThreadEnabled()) break block3;
+                }
+                return;
+            }
+            int n = Math.max(threadIsolationAccess.aeind$maxParallelPerThread(), MIParallelHatchCompat.getParallelLimit(blockEntity));
+            compoundTag.putBoolean(ENABLED, true);
+            compoundTag.putInt(THREADS, crossThreadControllerAccess.aeind$getCrossThreadManager().getActiveThreadCount());
+            compoundTag.putInt(PER_THREAD_LIMIT, Math.max(1, n));
+        }
+    }
 }
+

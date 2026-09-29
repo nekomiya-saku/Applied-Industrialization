@@ -1,0 +1,31 @@
+{
+  "type": "modern_industrialization:assembler",
+  "eu": 64,
+  "duration": 1200,
+  "item_inputs": [
+    {
+      "item": "ae2:crafting_accelerator",
+      "amount": 8
+    },
+    {
+      "item": "modern_industrialization:electronic_circuit",
+      "amount": 4
+    },
+    {
+      "item": "modern_industrialization:clean_stainless_steel_machine_casing",
+      "amount": 1
+    }
+  ],
+  "fluid_inputs": [
+    {
+      "fluid": "modern_industrialization:polyethylene",
+      "amount": 1000
+    }
+  ],
+  "item_outputs": [
+    {
+      "item": "aeind:cross_thread_parallel_warehouse",
+      "amount": 1
+    }
+  ]
+}

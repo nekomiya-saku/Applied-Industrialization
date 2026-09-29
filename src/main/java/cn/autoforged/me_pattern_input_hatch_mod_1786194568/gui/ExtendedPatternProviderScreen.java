@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- *
+ * 
  * Could not load the following classes:
  *  appeng.client.gui.implementations.PatternProviderScreen
  *  appeng.client.gui.style.ScreenStyle
@@ -42,9 +42,9 @@ extends PatternProviderScreen<ExtendedPatternProviderMenu> {
     private static final int BUTTON_GAP = 4;
     private Button returnMaterialButton;
 
-    public ExtendedPatternProviderScreen(ExtendedPatternProviderMenu hatchPatternProviderMenu, Inventory inventory, Component component, ScreenStyle screenStyle) {
-        super(hatchPatternProviderMenu, inventory, component, screenStyle);
-        this.setTextContent("dialog_title", Component.translatable("block.aeind.extended_pattern_input_hatch"));
+    public ExtendedPatternProviderScreen(ExtendedPatternProviderMenu extendedPatternProviderMenu, Inventory inventory, Component component, ScreenStyle screenStyle) {
+        super((PatternProviderMenu)extendedPatternProviderMenu, inventory, component, screenStyle);
+        this.setTextContent("dialog_title", (Component)Component.translatable((String)"block.aeind.advanced_extended_pattern_input_hatch"));
     }
 
     protected void init() {
@@ -54,9 +54,10 @@ extends PatternProviderScreen<ExtendedPatternProviderMenu> {
         MutableComponent mutableComponent = Component.translatable((String)"gui.ae2.ReturnInventory");
         int n = this.leftPos + 8 + this.font.width((FormattedText)mutableComponent);
         Objects.requireNonNull(this.font);
-        int n2 = this.topPos + RETURN_LABEL_TOP + (9 - BUTTON_HEIGHT) / 2;
+        int n2 = this.topPos + 116 + 0;
         this.returnMaterialButton.setX(n + 4);
         this.returnMaterialButton.setY(n2);
-        this.addRenderableWidget(this.returnMaterialButton);
+        this.addRenderableWidget((GuiEventListener)this.returnMaterialButton);
     }
 }
+

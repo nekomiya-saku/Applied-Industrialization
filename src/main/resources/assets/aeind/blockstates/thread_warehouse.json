@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "aeind:block/thread_warehouse"
+    }
+  }
+}

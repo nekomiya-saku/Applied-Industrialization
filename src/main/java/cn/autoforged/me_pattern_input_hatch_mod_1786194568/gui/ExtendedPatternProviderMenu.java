@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- *
+ * 
  * Could not load the following classes:
  *  appeng.helpers.patternprovider.PatternProviderLogicHost
  *  appeng.menu.implementations.PatternProviderMenu
@@ -19,9 +19,9 @@ public class ExtendedPatternProviderMenu
 extends PatternProviderMenu {
     private final ExtendedPatternInputHatchBlockEntity hatch;
 
-    public ExtendedPatternProviderMenu(MenuType<? extends PatternProviderMenu> menuType, int id, Inventory playerInventory, PatternProviderLogicHost host) {
-        super(menuType, id, playerInventory, host);
-        this.hatch = (ExtendedPatternInputHatchBlockEntity)host;
+    public ExtendedPatternProviderMenu(MenuType<? extends PatternProviderMenu> menuType, int n, Inventory inventory, PatternProviderLogicHost patternProviderLogicHost) {
+        super(menuType, n, inventory, patternProviderLogicHost);
+        this.hatch = (ExtendedPatternInputHatchBlockEntity)patternProviderLogicHost;
     }
 
     public void returnMaterial() {

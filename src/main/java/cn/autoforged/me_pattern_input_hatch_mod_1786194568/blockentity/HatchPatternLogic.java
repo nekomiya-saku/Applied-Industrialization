@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- *
+ * 
  * Could not load the following classes:
  *  appeng.api.config.Actionable
  *  appeng.api.crafting.IPatternDetails
@@ -47,11 +47,11 @@ implements ICraftingProvider {
     private final MEPatternInputHatchBlockEntity host;
     private final ItemStackHandler patternInventory = new ItemStackHandler(9){
 
-        public boolean isItemValid(int slot, ItemStack stack) {
-            return PatternDetailsHelper.isEncodedPattern((ItemStack)stack);
+        public boolean isItemValid(int n, ItemStack itemStack) {
+            return PatternDetailsHelper.isEncodedPattern((ItemStack)itemStack);
         }
 
-        protected void onContentsChanged(int slot) {
+        protected void onContentsChanged(int n) {
             HatchPatternLogic.this.host.markDirtyAndSync();
             HatchPatternLogic.this.updatePatterns();
         }
@@ -59,8 +59,8 @@ implements ICraftingProvider {
     private final List<IPatternDetails> patterns = new ArrayList<IPatternDetails>();
     private final List<GenericStack> sendList = new ArrayList<GenericStack>();
 
-    public HatchPatternLogic(MEPatternInputHatchBlockEntity host) {
-        this.host = host;
+    public HatchPatternLogic(MEPatternInputHatchBlockEntity mEPatternInputHatchBlockEntity) {
+        this.host = mEPatternInputHatchBlockEntity;
     }
 
     public ItemStackHandler getPatternInventory() {
@@ -74,10 +74,10 @@ implements ICraftingProvider {
     public void updatePatterns() {
         this.patterns.clear();
         for (int i = 0; i < this.patternInventory.getSlots(); ++i) {
-            ItemStack stack = this.patternInventory.getStackInSlot(i);
-            IPatternDetails details = PatternDetailsHelper.decodePattern((ItemStack)stack, (Level)this.host.getLevel());
-            if (details == null) continue;
-            this.patterns.add(details);
+            ItemStack itemStack = this.patternInventory.getStackInSlot(i);
+            IPatternDetails iPatternDetails = PatternDetailsHelper.decodePattern((ItemStack)itemStack, (Level)this.host.getLevel());
+            if (iPatternDetails == null) continue;
+            this.patterns.add(iPatternDetails);
         }
         ICraftingProvider.requestUpdate((IManagedGridNode)this.host.getMainNode());
     }
@@ -86,29 +86,29 @@ implements ICraftingProvider {
         return this.patterns;
     }
 
-    public boolean pushPattern(IPatternDetails details, KeyCounter[] inputHolder) {
-        if (!(this.sendList.isEmpty() && this.host.getMainNode().isActive() && this.patterns.contains(details) && this.host.canAcceptOrder())) {
+    public boolean pushPattern(IPatternDetails iPatternDetails, KeyCounter[] keyCounterArray) {
+        if (!(this.sendList.isEmpty() && this.host.getMainNode().isActive() && this.patterns.contains(iPatternDetails) && this.host.canAcceptOrder())) {
             return false;
         }
-        if (!this.canAcceptAllInputs(inputHolder)) {
+        if (!this.canAcceptAllInputs(keyCounterArray)) {
             return false;
         }
-        details.pushInputsToExternalInventory(inputHolder, (what, amount) -> {
-            long inserted = this.host.insertBuffer(what, amount, Actionable.MODULATE);
-            if (inserted < amount) {
-                this.sendList.add(new GenericStack(what, amount - inserted));
+        iPatternDetails.pushInputsToExternalInventory(keyCounterArray, (aEKey, l) -> {
+            long l2 = this.host.insertBuffer(aEKey, l, Actionable.MODULATE);
+            if (l2 < l) {
+                this.sendList.add(new GenericStack(aEKey, l - l2));
             }
         });
         this.host.markDirtyAndSync();
         return true;
     }
 
-    private boolean canAcceptAllInputs(KeyCounter[] inputHolder) {
-        for (KeyCounter counter : inputHolder) {
-            for (Object2LongMap.Entry entry : counter) {
-                AEKey what = (AEKey)entry.getKey();
-                long amount = entry.getLongValue();
-                if (amount <= 0L || this.host.insertBuffer(what, amount, Actionable.SIMULATE) >= amount) continue;
+    private boolean canAcceptAllInputs(KeyCounter[] keyCounterArray) {
+        for (KeyCounter keyCounter : keyCounterArray) {
+            for (Object2LongMap.Entry entry : keyCounter) {
+                AEKey aEKey = (AEKey)entry.getKey();
+                long l = entry.getLongValue();
+                if (l <= 0L || this.host.insertBuffer(aEKey, l, Actionable.SIMULATE) >= l) continue;
                 return false;
             }
         }
@@ -123,61 +123,62 @@ implements ICraftingProvider {
         if (this.sendList.isEmpty()) {
             return false;
         }
-        boolean changed = false;
-        ListIterator<GenericStack> it = this.sendList.listIterator();
-        while (it.hasNext()) {
-            GenericStack stack = it.next();
-            long inserted = this.host.insertBuffer(stack.what(), stack.amount(), Actionable.MODULATE);
-            if (inserted > 0L) {
-                changed = true;
+        boolean bl = false;
+        ListIterator<GenericStack> listIterator = this.sendList.listIterator();
+        while (listIterator.hasNext()) {
+            GenericStack genericStack = listIterator.next();
+            long l = this.host.insertBuffer(genericStack.what(), genericStack.amount(), Actionable.MODULATE);
+            if (l > 0L) {
+                bl = true;
             }
-            if (inserted >= stack.amount()) {
-                it.remove();
+            if (l >= genericStack.amount()) {
+                listIterator.remove();
                 continue;
             }
-            if (inserted <= 0L) continue;
-            it.set(new GenericStack(stack.what(), stack.amount() - inserted));
+            if (l <= 0L) continue;
+            listIterator.set(new GenericStack(genericStack.what(), genericStack.amount() - l));
         }
         if (this.sendList.isEmpty()) {
             ICraftingProvider.requestUpdate((IManagedGridNode)this.host.getMainNode());
         }
-        return changed;
+        return bl;
     }
 
-    public void writeToNBT(CompoundTag tag, HolderLookup.Provider registries) {
-        tag.put("patterns", (Tag)this.patternInventory.serializeNBT(registries));
-        ListTag sendListTag = new ListTag();
-        for (GenericStack stack : this.sendList) {
-            sendListTag.add(GenericStack.writeTag(registries, stack));
+    public void writeToNBT(CompoundTag compoundTag, HolderLookup.Provider provider) {
+        compoundTag.put("patterns", (Tag)this.patternInventory.serializeNBT(provider));
+        ListTag listTag = new ListTag();
+        for (GenericStack genericStack : this.sendList) {
+            listTag.add((Object)GenericStack.writeTag((HolderLookup.Provider)provider, (GenericStack)genericStack));
         }
-        tag.put("sendList", (Tag)sendListTag);
+        compoundTag.put("sendList", (Tag)listTag);
     }
 
-    public void readFromNBT(CompoundTag tag, HolderLookup.Provider registries) {
-        if (tag.contains("patterns")) {
-            this.patternInventory.deserializeNBT(registries, tag.getCompound("patterns"));
+    public void readFromNBT(CompoundTag compoundTag, HolderLookup.Provider provider) {
+        if (compoundTag.contains("patterns")) {
+            this.patternInventory.deserializeNBT(provider, compoundTag.getCompound("patterns"));
         }
         this.sendList.clear();
-        if (tag.contains("sendList")) {
-            ListTag sendListTag = tag.getList("sendList", 10);
-            for (int i = 0; i < sendListTag.size(); ++i) {
-                GenericStack stack = GenericStack.readTag((HolderLookup.Provider)registries, (CompoundTag)sendListTag.getCompound(i));
-                if (stack == null) continue;
-                this.sendList.add(stack);
+        if (compoundTag.contains("sendList")) {
+            ListTag listTag = compoundTag.getList("sendList", 10);
+            for (int i = 0; i < listTag.size(); ++i) {
+                GenericStack genericStack = GenericStack.readTag((HolderLookup.Provider)provider, (CompoundTag)listTag.getCompound(i));
+                if (genericStack == null) continue;
+                this.sendList.add(genericStack);
             }
         }
     }
 
-    public void addDrops(List<ItemStack> drops) {
+    public void addDrops(List<ItemStack> list) {
         for (int i = 0; i < this.patternInventory.getSlots(); ++i) {
             ItemStack itemStack = this.patternInventory.getStackInSlot(i);
             if (itemStack.isEmpty()) continue;
-            drops.add(itemStack.copy());
+            list.add(itemStack.copy());
         }
         if (this.host.getLevel() != null) {
             for (GenericStack genericStack : this.sendList) {
-                genericStack.what().addDrops(genericStack.amount(), drops, this.host.getLevel(), this.host.getBlockPos());
+                genericStack.what().addDrops(genericStack.amount(), list, this.host.getLevel(), this.host.getBlockPos());
             }
         }
     }
 }
+

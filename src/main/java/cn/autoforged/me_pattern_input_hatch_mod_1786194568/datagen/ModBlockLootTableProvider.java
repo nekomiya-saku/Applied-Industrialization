@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- *
+ * 
  * Could not load the following classes:
  *  net.minecraft.core.HolderLookup$Provider
  *  net.minecraft.data.loot.BlockLootSubProvider
@@ -18,17 +18,20 @@ import net.minecraft.world.level.block.Block;
 
 public class ModBlockLootTableProvider
 extends BlockLootSubProvider {
-    protected ModBlockLootTableProvider(HolderLookup.Provider lookupProvider) {
-        super(Set.of(), FeatureFlags.DEFAULT_FLAGS, lookupProvider);
+    protected ModBlockLootTableProvider(HolderLookup.Provider provider) {
+        super(Set.of(), FeatureFlags.DEFAULT_FLAGS, provider);
     }
 
     protected void generate() {
-        this.dropSelf((Block)ModBlocks.ME_PATTERN_INPUT_HATCH.get());
+        this.dropSelf((Block)ModBlocks.ADVANCED_PATTERN_INPUT_HATCH.get());
+        if (ModBlocks.ADVANCED_EXTENDED_PATTERN_INPUT_HATCH != null) {
+            this.dropSelf((Block)ModBlocks.ADVANCED_EXTENDED_PATTERN_INPUT_HATCH.get());
+        }
         this.dropSelf((Block)ModBlocks.ME_OUTPUT_HATCH.get());
     }
 
     protected Iterable<Block> getKnownBlocks() {
-        return ModBlocks.BLOCKS.getEntries().stream().map(holder -> (Block)holder.get()).toList();
+        return ModBlocks.BLOCKS.getEntries().stream().map(deferredHolder -> (Block)deferredHolder.get()).toList();
     }
 }
 

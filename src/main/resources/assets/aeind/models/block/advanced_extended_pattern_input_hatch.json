@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "aeind:block/advanced_extended_pattern_input_hatch"
+  }
+}

@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- *
+ * 
  * Could not load the following classes:
  *  net.minecraft.data.DataGenerator
  *  net.minecraft.data.DataProvider
@@ -37,18 +37,18 @@ import net.neoforged.neoforge.data.event.GatherDataEvent;
 @EventBusSubscriber(modid="aeind")
 public class DataGenerators {
     @SubscribeEvent
-    public static void gatherData(GatherDataEvent event) {
-        DataGenerator generator = event.getGenerator();
-        PackOutput packOutput = generator.getPackOutput();
-        ExistingFileHelper existingFileHelper = event.getExistingFileHelper();
-        CompletableFuture lookupProvider = event.getLookupProvider();
-        generator.addProvider(event.includeClient(), (DataProvider)new ModBlockStateProvider(packOutput, existingFileHelper));
-        generator.addProvider(event.includeClient(), (DataProvider)new ModItemModelProvider(packOutput, existingFileHelper));
-        generator.addProvider(event.includeServer(), (DataProvider)new LootTableProvider(packOutput, Set.of(), List.of(new LootTableProvider.SubProviderEntry(ModBlockLootTableProvider::new, LootContextParamSets.BLOCK)), lookupProvider));
-        ModBlockTagsProvider blockTags = new ModBlockTagsProvider(packOutput, lookupProvider, existingFileHelper);
-        generator.addProvider(event.includeServer(), (DataProvider)blockTags);
-        generator.addProvider(event.includeServer(), (DataProvider)new ModItemTagsProvider(packOutput, lookupProvider, blockTags.contentsGetter(), existingFileHelper));
-        generator.addProvider(event.includeServer(), (DataProvider)new ModRecipeProvider(packOutput, lookupProvider));
+    public static void gatherData(GatherDataEvent gatherDataEvent) {
+        DataGenerator dataGenerator = gatherDataEvent.getGenerator();
+        PackOutput packOutput = dataGenerator.getPackOutput();
+        ExistingFileHelper existingFileHelper = gatherDataEvent.getExistingFileHelper();
+        CompletableFuture completableFuture = gatherDataEvent.getLookupProvider();
+        dataGenerator.addProvider(gatherDataEvent.includeClient(), (DataProvider)new ModBlockStateProvider(packOutput, existingFileHelper));
+        dataGenerator.addProvider(gatherDataEvent.includeClient(), (DataProvider)new ModItemModelProvider(packOutput, existingFileHelper));
+        dataGenerator.addProvider(gatherDataEvent.includeServer(), (DataProvider)new LootTableProvider(packOutput, Set.of(), List.of(new LootTableProvider.SubProviderEntry(ModBlockLootTableProvider::new, LootContextParamSets.BLOCK)), completableFuture));
+        ModBlockTagsProvider modBlockTagsProvider = new ModBlockTagsProvider(packOutput, completableFuture, existingFileHelper);
+        dataGenerator.addProvider(gatherDataEvent.includeServer(), (DataProvider)modBlockTagsProvider);
+        dataGenerator.addProvider(gatherDataEvent.includeServer(), (DataProvider)new ModItemTagsProvider(packOutput, completableFuture, modBlockTagsProvider.contentsGetter(), existingFileHelper));
+        dataGenerator.addProvider(gatherDataEvent.includeServer(), (DataProvider)new ModRecipeProvider(packOutput, completableFuture));
     }
 }
 

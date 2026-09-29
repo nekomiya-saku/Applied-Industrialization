@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- *
+ * 
  * Could not load the following classes:
  *  com.mojang.serialization.MapCodec
  *  net.minecraft.core.BlockPos
@@ -50,31 +50,31 @@ extends BaseEntityBlock {
     }
 
     @Nullable
-    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new MEOutputHatchBlockEntity(pos, state);
+    public BlockEntity newBlockEntity(BlockPos blockPos, BlockState blockState) {
+        return new MEOutputHatchBlockEntity(blockPos, blockState);
     }
 
-    protected RenderShape getRenderShape(BlockState state) {
+    protected RenderShape getRenderShape(BlockState blockState) {
         return RenderShape.MODEL;
     }
 
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+    protected void onRemove(BlockState blockState, Level level, BlockPos blockPos, BlockState blockState2, boolean bl) {
         BlockEntity blockEntity;
-        if (!state.is(newState.getBlock()) && (blockEntity = level.getBlockEntity(pos)) instanceof MEOutputHatchBlockEntity) {
-            MEOutputHatchBlockEntity blockEntity2 = (MEOutputHatchBlockEntity)blockEntity;
-            NonNullList drops = NonNullList.create();
-            blockEntity2.addOutputDrops((List<ItemStack>)drops);
-            Containers.dropContents((Level)level, (BlockPos)pos, (NonNullList)drops);
+        if (!blockState.is(blockState2.getBlock()) && (blockEntity = level.getBlockEntity(blockPos)) instanceof MEOutputHatchBlockEntity) {
+            MEOutputHatchBlockEntity mEOutputHatchBlockEntity = (MEOutputHatchBlockEntity)blockEntity;
+            NonNullList nonNullList = NonNullList.create();
+            mEOutputHatchBlockEntity.addOutputDrops((List<ItemStack>)nonNullList);
+            Containers.dropContents((Level)level, (BlockPos)blockPos, (NonNullList)nonNullList);
         }
-        super.onRemove(state, level, pos, newState, movedByPiston);
+        super.onRemove(blockState, level, blockPos, blockState2, bl);
     }
 
     @Nullable
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState blockState, BlockEntityType<T> blockEntityType) {
         if (level.isClientSide) {
             return null;
         }
-        return MEOutputHatchBlock.createTickerHelper(type, (BlockEntityType)((BlockEntityType)ModBlockEntities.ME_OUTPUT_HATCH.get()), MEOutputHatchBlockEntity::serverTick);
+        return MEOutputHatchBlock.createTickerHelper(blockEntityType, (BlockEntityType)((BlockEntityType)ModBlockEntities.ME_OUTPUT_HATCH.get()), MEOutputHatchBlockEntity::serverTick);
     }
 }
 

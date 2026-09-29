@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- *
+ * 
  * Could not load the following classes:
  *  appeng.client.gui.implementations.PatternProviderScreen
  *  appeng.client.gui.style.ScreenStyle
@@ -43,8 +43,8 @@ extends PatternProviderScreen<HatchPatternProviderMenu> {
     private Button returnMaterialButton;
 
     public HatchPatternProviderScreen(HatchPatternProviderMenu hatchPatternProviderMenu, Inventory inventory, Component component, ScreenStyle screenStyle) {
-        super(hatchPatternProviderMenu, inventory, component, screenStyle);
-        this.setTextContent("dialog_title", (Component)Component.translatable((String)"block.aeind.me_pattern_input_hatch"));
+        super((PatternProviderMenu)hatchPatternProviderMenu, inventory, component, screenStyle);
+        this.setTextContent("dialog_title", hatchPatternProviderMenu.getProviderTitle());
     }
 
     protected void init() {
@@ -54,9 +54,10 @@ extends PatternProviderScreen<HatchPatternProviderMenu> {
         MutableComponent mutableComponent = Component.translatable((String)"gui.ae2.ReturnInventory");
         int n = this.leftPos + 8 + this.font.width((FormattedText)mutableComponent);
         Objects.requireNonNull(this.font);
-        int n2 = this.topPos + 86 + (9 - 9) / 2;
+        int n2 = this.topPos + 86 + 0;
         this.returnMaterialButton.setX(n + 4);
         this.returnMaterialButton.setY(n2);
-        this.addRenderableWidget(this.returnMaterialButton);
+        this.addRenderableWidget((GuiEventListener)this.returnMaterialButton);
     }
 }
+

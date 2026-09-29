@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- *
+ * 
  * Could not load the following classes:
  *  com.mojang.datafixers.kinds.App
  *  com.mojang.datafixers.kinds.Applicative
@@ -17,6 +17,8 @@
  */
 package cn.autoforged.me_pattern_input_hatch_mod_1786194568.compat;
 
+import com.mojang.datafixers.kinds.App;
+import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceLocation;
@@ -29,9 +31,7 @@ import net.neoforged.neoforge.registries.RegisterEvent;
 @EventBusSubscriber(modid="aeind", bus=EventBusSubscriber.Bus.MOD)
 public record ProductiveBeeExistsCondition(ResourceLocation bee) implements ICondition
 {
-    public static final MapCodec<ProductiveBeeExistsCondition> CODEC = RecordCodecBuilder.mapCodec(instance ->
-            instance.group(ResourceLocation.CODEC.fieldOf("bee").forGetter(ProductiveBeeExistsCondition::bee))
-                    .apply(instance, ProductiveBeeExistsCondition::new));
+    public static final MapCodec<ProductiveBeeExistsCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group((App)ResourceLocation.CODEC.fieldOf("bee").forGetter(ProductiveBeeExistsCondition::bee)).apply((Applicative)instance, ProductiveBeeExistsCondition::new));
 
     @SubscribeEvent
     public static void register(RegisterEvent registerEvent) {
@@ -54,3 +54,4 @@ public record ProductiveBeeExistsCondition(ResourceLocation bee) implements ICon
         return CODEC;
     }
 }
+

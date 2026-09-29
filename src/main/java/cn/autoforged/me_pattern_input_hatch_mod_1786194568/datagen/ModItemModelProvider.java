@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- *
+ * 
  * Could not load the following classes:
  *  net.minecraft.data.PackOutput
  *  net.neoforged.neoforge.client.model.generators.ItemModelProvider
@@ -14,8 +14,8 @@ import net.neoforged.neoforge.common.data.ExistingFileHelper;
 
 public class ModItemModelProvider
 extends ItemModelProvider {
-    public ModItemModelProvider(PackOutput output, ExistingFileHelper existingFileHelper) {
-        super(output, "aeind", existingFileHelper);
+    public ModItemModelProvider(PackOutput packOutput, ExistingFileHelper existingFileHelper) {
+        super(packOutput, "aeind", existingFileHelper);
     }
 
     protected void registerModels() {

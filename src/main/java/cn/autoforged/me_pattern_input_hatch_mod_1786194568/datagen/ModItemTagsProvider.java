@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- *
+ * 
  * Could not load the following classes:
  *  net.minecraft.core.HolderLookup$Provider
  *  net.minecraft.data.PackOutput
@@ -23,8 +23,8 @@ import org.jetbrains.annotations.Nullable;
 
 public class ModItemTagsProvider
 extends ItemTagsProvider {
-    public ModItemTagsProvider(PackOutput output, CompletableFuture<HolderLookup.Provider> lookupProvider, CompletableFuture<TagsProvider.TagLookup<Block>> blockTags, @Nullable ExistingFileHelper existingFileHelper) {
-        super(output, lookupProvider, blockTags, "aeind", existingFileHelper);
+    public ModItemTagsProvider(PackOutput packOutput, CompletableFuture<HolderLookup.Provider> completableFuture, CompletableFuture<TagsProvider.TagLookup<Block>> completableFuture2, @Nullable ExistingFileHelper existingFileHelper) {
+        super(packOutput, completableFuture, completableFuture2, "aeind", existingFileHelper);
     }
 
     protected void addTags(HolderLookup.Provider provider) {

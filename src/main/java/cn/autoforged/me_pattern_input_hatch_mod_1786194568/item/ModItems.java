@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- *
+ * 
  * Could not load the following classes:
  *  net.neoforged.bus.api.IEventBus
  *  net.neoforged.neoforge.registries.DeferredRegister
@@ -14,8 +14,8 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public class ModItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems((String)"aeind");
 
-    public static void register(IEventBus eventBus) {
-        ITEMS.register(eventBus);
+    public static void register(IEventBus iEventBus) {
+        ITEMS.register(iEventBus);
     }
 }
 

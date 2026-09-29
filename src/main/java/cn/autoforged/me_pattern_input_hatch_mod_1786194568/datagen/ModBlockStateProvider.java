@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- *
+ * 
  * Could not load the following classes:
  *  net.minecraft.data.PackOutput
  *  net.minecraft.world.level.block.Block
@@ -17,12 +17,15 @@ import net.neoforged.neoforge.common.data.ExistingFileHelper;
 
 public class ModBlockStateProvider
 extends BlockStateProvider {
-    public ModBlockStateProvider(PackOutput output, ExistingFileHelper existingFileHelper) {
-        super(output, "aeind", existingFileHelper);
+    public ModBlockStateProvider(PackOutput packOutput, ExistingFileHelper existingFileHelper) {
+        super(packOutput, "aeind", existingFileHelper);
     }
 
     protected void registerStatesAndModels() {
-        this.simpleBlockWithItem((Block)ModBlocks.ME_PATTERN_INPUT_HATCH.get(), this.cubeAll((Block)ModBlocks.ME_PATTERN_INPUT_HATCH.get()));
+        this.simpleBlockWithItem((Block)ModBlocks.ADVANCED_PATTERN_INPUT_HATCH.get(), this.cubeAll((Block)ModBlocks.ADVANCED_PATTERN_INPUT_HATCH.get()));
+        if (ModBlocks.ADVANCED_EXTENDED_PATTERN_INPUT_HATCH != null) {
+            this.simpleBlockWithItem((Block)ModBlocks.ADVANCED_EXTENDED_PATTERN_INPUT_HATCH.get(), this.cubeAll((Block)ModBlocks.ADVANCED_EXTENDED_PATTERN_INPUT_HATCH.get()));
+        }
         this.simpleBlockWithItem((Block)ModBlocks.ME_OUTPUT_HATCH.get(), this.cubeAll((Block)ModBlocks.ME_OUTPUT_HATCH.get()));
     }
 }

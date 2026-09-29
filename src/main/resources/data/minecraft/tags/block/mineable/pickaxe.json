@@ -1,9 +1,12 @@
 {
+  "replace": false,
   "values": [
-    "aeind:me_pattern_input_hatch",
+    "aeind:thread_warehouse",
+    "aeind:cross_thread_parallel_warehouse",
+    "aeind:advanced_pattern_input_hatch",
     "aeind:me_output_hatch",
     {
-      "id": "aeind:extended_pattern_input_hatch",
+      "id": "aeind:advanced_extended_pattern_input_hatch",
       "required": false
     }
   ]

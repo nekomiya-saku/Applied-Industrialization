@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- *
+ * 
  * Could not load the following classes:
  *  net.minecraft.server.level.ServerPlayer
  *  net.minecraft.world.entity.player.Player
@@ -14,8 +14,8 @@
  */
 package cn.autoforged.me_pattern_input_hatch_mod_1786194568.network;
 
-import cn.autoforged.me_pattern_input_hatch_mod_1786194568.gui.HatchPatternProviderMenu;
 import cn.autoforged.me_pattern_input_hatch_mod_1786194568.gui.ExtendedPatternProviderMenu;
+import cn.autoforged.me_pattern_input_hatch_mod_1786194568.gui.HatchPatternProviderMenu;
 import cn.autoforged.me_pattern_input_hatch_mod_1786194568.network.ServerboundReturnMaterialPayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
@@ -29,19 +29,22 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 @EventBusSubscriber(modid="aeind", bus=EventBusSubscriber.Bus.MOD)
 public class ModPayloads {
     @SubscribeEvent
-    public static void register(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("1");
-        registrar.playToServer(ServerboundReturnMaterialPayload.TYPE, ServerboundReturnMaterialPayload.STREAM_CODEC, ModPayloads::handleReturnMaterial);
+    public static void register(RegisterPayloadHandlersEvent registerPayloadHandlersEvent) {
+        PayloadRegistrar payloadRegistrar = registerPayloadHandlersEvent.registrar("1");
+        payloadRegistrar.playToServer(ServerboundReturnMaterialPayload.TYPE, ServerboundReturnMaterialPayload.STREAM_CODEC, ModPayloads::handleReturnMaterial);
     }
 
-    private static void handleReturnMaterial(ServerboundReturnMaterialPayload payload, IPayloadContext context) {
+    private static void handleReturnMaterial(ServerboundReturnMaterialPayload serverboundReturnMaterialPayload, IPayloadContext iPayloadContext) {
         AbstractContainerMenu abstractContainerMenu;
-        Player player = context.player();
-        if (player instanceof ServerPlayer && (abstractContainerMenu = player.containerMenu) instanceof HatchPatternProviderMenu) {
-            HatchPatternProviderMenu menu = (HatchPatternProviderMenu)abstractContainerMenu;
-            menu.returnMaterial();
-        } else if (player instanceof ServerPlayer && player.containerMenu instanceof ExtendedPatternProviderMenu menu) {
-            menu.returnMaterial();
+        AbstractContainerMenu abstractContainerMenu2;
+        Player player = iPayloadContext.player();
+        if (player instanceof ServerPlayer && (abstractContainerMenu2 = player.containerMenu) instanceof HatchPatternProviderMenu) {
+            HatchPatternProviderMenu hatchPatternProviderMenu = (HatchPatternProviderMenu)abstractContainerMenu2;
+            hatchPatternProviderMenu.returnMaterial();
+        } else if (player instanceof ServerPlayer && (abstractContainerMenu = player.containerMenu) instanceof ExtendedPatternProviderMenu) {
+            ExtendedPatternProviderMenu extendedPatternProviderMenu = (ExtendedPatternProviderMenu)abstractContainerMenu;
+            extendedPatternProviderMenu.returnMaterial();
         }
     }
 }
+

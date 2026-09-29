@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- *
+ * 
  * Could not load the following classes:
  *  appeng.api.config.Actionable
  *  appeng.api.config.Settings
@@ -45,7 +45,9 @@
  *  net.minecraft.core.HolderLookup$Provider
  *  net.minecraft.core.NonNullList
  *  net.minecraft.nbt.CompoundTag
+ *  net.minecraft.network.chat.Component
  *  net.minecraft.resources.ResourceLocation
+ *  net.minecraft.world.Nameable
  *  net.minecraft.world.inventory.ContainerData
  *  net.minecraft.world.item.ItemStack
  *  net.minecraft.world.level.ItemLike
@@ -101,6 +103,9 @@ import aztech.modern_industrialization.thirdparty.fabrictransfer.api.storage.Tra
 import cn.autoforged.me_pattern_input_hatch_mod_1786194568.block.ModBlocks;
 import cn.autoforged.me_pattern_input_hatch_mod_1786194568.blockentity.ExtendedHatchPatternProviderLogic;
 import cn.autoforged.me_pattern_input_hatch_mod_1786194568.blockentity.ModBlockEntities;
+import cn.autoforged.me_pattern_input_hatch_mod_1786194568.blockentity.PatternInputHatchHost;
+import cn.autoforged.me_pattern_input_hatch_mod_1786194568.isolation.IsolatedInputProvider;
+import cn.autoforged.me_pattern_input_hatch_mod_1786194568.isolation.ThreadIsolationRoom;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -132,19 +137,22 @@ extends HatchBlockEntity
 implements IInWorldGridNodeHost,
 IActionHost,
 PatternProviderLogicHost,
+PatternInputHatchHost,
+IsolatedInputProvider,
 Nameable {
     public static final int PATTERN_SLOTS = 36;
-    public static final int BUFFER_SLOTS = 9;
-    public static final int BUFFER_FLUID_TANKS = 9;
+    public static final int SLOTS_PER_ROOM = 9;
+    public static final int BUFFER_SLOTS = 324;
+    public static final int BUFFER_FLUID_TANKS = 324;
     public static final int UPGRADE_SLOTS = 2;
-    public static final long FLUID_CAPACITY = Integer.MAX_VALUE;
+    public static final long FLUID_CAPACITY = Long.MAX_VALUE;
     public static final int TICK_RATE = 20;
     public static final int REDSTONE_MODE_IGNORE = 0;
     public static final int REDSTONE_MODE_HIGH = 1;
     public static final int REDSTONE_MODE_LOW = 2;
     private final ExtendedHatchPatternProviderLogic patternLogic;
-    private final IManagedGridNode mainNode = GridHelper.createManagedNode(this, NODE_LISTENER).setVisualRepresentation(new ItemStack((ItemLike)ModBlocks.EXTENDED_PATTERN_INPUT_HATCH.get())).setInWorldNode(true).setTagName("extended_pattern_input_hatch_node").setFlags(new GridFlags[]{GridFlags.REQUIRE_CHANNEL}).setExposedOnSides(EnumSet.allOf(Direction.class));
-    private final IUpgradeInventory upgrades = UpgradeInventories.forMachine((ItemLike)((ItemLike)ModBlocks.EXTENDED_PATTERN_INPUT_HATCH.get()), (int)2, this::onUpgradesChanged);
+    private final IManagedGridNode mainNode = GridHelper.createManagedNode((Object)this, NODE_LISTENER).setVisualRepresentation(new ItemStack((ItemLike)ModBlocks.ADVANCED_EXTENDED_PATTERN_INPUT_HATCH.get())).setInWorldNode(true).setTagName("advanced_extended_pattern_input_hatch_node").setFlags(new GridFlags[]{GridFlags.REQUIRE_CHANNEL}).setExposedOnSides(EnumSet.allOf(Direction.class));
+    private final IUpgradeInventory upgrades = UpgradeInventories.forMachine((ItemLike)((ItemLike)ModBlocks.ADVANCED_EXTENDED_PATTERN_INPUT_HATCH.get()), (int)2, this::onUpgradesChanged);
     private int blockingMode = 0;
     private int redstoneMode = 0;
     @Nullable
@@ -152,58 +160,54 @@ Nameable {
     private final MIInventory bufferInventory;
     private final MachineComponent persistentData = new MachineComponent(){
 
-        public void writeNbt(CompoundTag tag, HolderLookup.Provider registries) {
-            ExtendedPatternInputHatchBlockEntity.this.mainNode.saveToNBT(tag);
-            ExtendedPatternInputHatchBlockEntity.this.patternLogic.writeToNBT(tag, registries);
-            ExtendedPatternInputHatchBlockEntity.this.upgrades.writeToNBT(tag, "upgrades", registries);
-            tag.putInt("blockingMode", ExtendedPatternInputHatchBlockEntity.this.blockingMode);
-            tag.putInt("redstoneMode", ExtendedPatternInputHatchBlockEntity.this.redstoneMode);
+        public void writeNbt(CompoundTag compoundTag, HolderLookup.Provider provider) {
+            ExtendedPatternInputHatchBlockEntity.this.mainNode.saveToNBT(compoundTag);
+            ExtendedPatternInputHatchBlockEntity.this.patternLogic.writeToNBT(compoundTag, provider);
+            ExtendedPatternInputHatchBlockEntity.this.upgrades.writeToNBT(compoundTag, "upgrades", provider);
+            compoundTag.putInt("blockingMode", ExtendedPatternInputHatchBlockEntity.this.blockingMode);
+            compoundTag.putInt("redstoneMode", ExtendedPatternInputHatchBlockEntity.this.redstoneMode);
             if (ExtendedPatternInputHatchBlockEntity.this.customName != null) {
-                tag.putString("customName", ExtendedPatternInputHatchBlockEntity.this.customName.getString());
+                compoundTag.putString("customName", ExtendedPatternInputHatchBlockEntity.this.customName.getString());
             }
         }
 
-        public void readNbt(CompoundTag tag, HolderLookup.Provider registries, boolean isUpgradingMachine) {
-            ExtendedPatternInputHatchBlockEntity.this.mainNode.loadFromNBT(tag);
-            ExtendedPatternInputHatchBlockEntity.this.patternLogic.readFromNBT(tag, registries);
-            ExtendedPatternInputHatchBlockEntity.this.upgrades.readFromNBT(tag, "upgrades", registries);
-            if (tag.contains("blockingMode")) {
-                ExtendedPatternInputHatchBlockEntity.this.blockingMode = tag.getInt("blockingMode");
+        public void readNbt(CompoundTag compoundTag, HolderLookup.Provider provider, boolean bl) {
+            ExtendedPatternInputHatchBlockEntity.this.mainNode.loadFromNBT(compoundTag);
+            ExtendedPatternInputHatchBlockEntity.this.patternLogic.readFromNBT(compoundTag, provider);
+            ExtendedPatternInputHatchBlockEntity.this.upgrades.readFromNBT(compoundTag, "upgrades", provider);
+            if (compoundTag.contains("blockingMode")) {
+                ExtendedPatternInputHatchBlockEntity.this.blockingMode = compoundTag.getInt("blockingMode");
             }
-            if (tag.contains("redstoneMode")) {
-                ExtendedPatternInputHatchBlockEntity.this.redstoneMode = tag.getInt("redstoneMode");
+            if (compoundTag.contains("redstoneMode")) {
+                ExtendedPatternInputHatchBlockEntity.this.redstoneMode = compoundTag.getInt("redstoneMode");
             }
-            ExtendedPatternInputHatchBlockEntity.this.customName = tag.contains("customName")
-                    ? Component.literal(tag.getString("customName"))
-                    : null;
+            ExtendedPatternInputHatchBlockEntity.this.customName = compoundTag.contains("customName") ? Component.literal((String)compoundTag.getString("customName")) : null;
         }
 
-        public void writeClientNbt(CompoundTag tag, HolderLookup.Provider registries) {
-            ExtendedPatternInputHatchBlockEntity.this.upgrades.writeToNBT(tag, "upgrades", registries);
-            tag.putInt("blockingMode", ExtendedPatternInputHatchBlockEntity.this.blockingMode);
-            tag.putInt("redstoneMode", ExtendedPatternInputHatchBlockEntity.this.redstoneMode);
+        public void writeClientNbt(CompoundTag compoundTag, HolderLookup.Provider provider) {
+            ExtendedPatternInputHatchBlockEntity.this.upgrades.writeToNBT(compoundTag, "upgrades", provider);
+            compoundTag.putInt("blockingMode", ExtendedPatternInputHatchBlockEntity.this.blockingMode);
+            compoundTag.putInt("redstoneMode", ExtendedPatternInputHatchBlockEntity.this.redstoneMode);
             if (ExtendedPatternInputHatchBlockEntity.this.customName != null) {
-                tag.putString("customName", ExtendedPatternInputHatchBlockEntity.this.customName.getString());
+                compoundTag.putString("customName", ExtendedPatternInputHatchBlockEntity.this.customName.getString());
             }
         }
 
-        public void readClientNbt(CompoundTag tag, HolderLookup.Provider registries) {
-            ExtendedPatternInputHatchBlockEntity.this.upgrades.readFromNBT(tag, "upgrades", registries);
-            if (tag.contains("blockingMode")) {
-                ExtendedPatternInputHatchBlockEntity.this.blockingMode = tag.getInt("blockingMode");
+        public void readClientNbt(CompoundTag compoundTag, HolderLookup.Provider provider) {
+            ExtendedPatternInputHatchBlockEntity.this.upgrades.readFromNBT(compoundTag, "upgrades", provider);
+            if (compoundTag.contains("blockingMode")) {
+                ExtendedPatternInputHatchBlockEntity.this.blockingMode = compoundTag.getInt("blockingMode");
             }
-            if (tag.contains("redstoneMode")) {
-                ExtendedPatternInputHatchBlockEntity.this.redstoneMode = tag.getInt("redstoneMode");
+            if (compoundTag.contains("redstoneMode")) {
+                ExtendedPatternInputHatchBlockEntity.this.redstoneMode = compoundTag.getInt("redstoneMode");
             }
-            ExtendedPatternInputHatchBlockEntity.this.customName = tag.contains("customName")
-                    ? Component.literal(tag.getString("customName"))
-                    : null;
+            ExtendedPatternInputHatchBlockEntity.this.customName = compoundTag.contains("customName") ? Component.literal((String)compoundTag.getString("customName")) : null;
         }
     };
     private final ContainerData dataAccess = new ContainerData(){
 
-        public int get(int index) {
-            return switch (index) {
+        public int get(int n) {
+            return switch (n) {
                 case 0 -> ExtendedPatternInputHatchBlockEntity.this.blockingMode;
                 case 1 -> ExtendedPatternInputHatchBlockEntity.this.redstoneMode;
                 case 2 -> {
@@ -222,7 +226,7 @@ Nameable {
             };
         }
 
-        public void set(int index, int value) {
+        public void set(int n, int n2) {
         }
 
         public int getCount() {
@@ -232,29 +236,29 @@ Nameable {
     private int tickCount = 0;
     private static final IGridNodeListener<ExtendedPatternInputHatchBlockEntity> NODE_LISTENER = new IGridNodeListener<ExtendedPatternInputHatchBlockEntity>(){
 
-        public void onSaveChanges(ExtendedPatternInputHatchBlockEntity owner, IGridNode node) {
-            owner.setChanged();
+        public void onSaveChanges(ExtendedPatternInputHatchBlockEntity extendedPatternInputHatchBlockEntity, IGridNode iGridNode) {
+            extendedPatternInputHatchBlockEntity.setChanged();
         }
 
-        public void onStateChanged(ExtendedPatternInputHatchBlockEntity owner, IGridNode node, IGridNodeListener.State state) {
-            owner.refreshPatterns();
+        public void onStateChanged(ExtendedPatternInputHatchBlockEntity extendedPatternInputHatchBlockEntity, IGridNode iGridNode, IGridNodeListener.State state) {
+            extendedPatternInputHatchBlockEntity.refreshPatterns();
         }
     };
 
-    public ExtendedPatternInputHatchBlockEntity(BlockPos pos, BlockState blockState) {
-        super(new BEP((BlockEntityType)ModBlockEntities.EXTENDED_PATTERN_INPUT_HATCH.get(), pos, blockState), new MachineGuiParameters.Builder(ResourceLocation.fromNamespaceAndPath((String)"aeind", (String)"extended_pattern_input_hatch"), true).build(), OrientationComponent.Params.noFacing((boolean)true, (boolean)false));
+    public ExtendedPatternInputHatchBlockEntity(BlockPos blockPos, BlockState blockState) {
+        super(new BEP((BlockEntityType)ModBlockEntities.ADVANCED_EXTENDED_PATTERN_INPUT_HATCH.get(), blockPos, blockState), new MachineGuiParameters.Builder(ResourceLocation.fromNamespaceAndPath((String)"aeind", (String)"advanced_extended_pattern_input_hatch"), true).build(), OrientationComponent.Params.noFacing((boolean)true, (boolean)false));
         this.patternLogic = new ExtendedHatchPatternProviderLogic(this.mainNode, this);
-        ArrayList<ConfigurableItemStack> itemStacks = new ArrayList<ConfigurableItemStack>(9);
-        for (int i = 0; i < 9; ++i) {
-            itemStacks.add(ConfigurableItemStack.standardInputSlot());
+        ArrayList<ConfigurableItemStack> arrayList = new ArrayList<ConfigurableItemStack>(324);
+        for (int i = 0; i < 324; ++i) {
+            arrayList.add(ConfigurableItemStack.standardInputSlot());
         }
-        ArrayList<ConfigurableFluidStack> fluidStacks = new ArrayList<ConfigurableFluidStack>(9);
-        for (int i = 0; i < 9; ++i) {
-            fluidStacks.add(ConfigurableFluidStack.standardInputSlot((long)Integer.MAX_VALUE));
+        ArrayList<ConfigurableFluidStack> arrayList2 = new ArrayList<ConfigurableFluidStack>(324);
+        for (int i = 0; i < 324; ++i) {
+            arrayList2.add(ConfigurableFluidStack.standardInputSlot(Long.MAX_VALUE));
         }
-        SlotPositions itemPos = new SlotPositions.Builder().addSlots(0, 0, 9, 1).build();
-        SlotPositions fluidPos = new SlotPositions.Builder().addSlots(0, 0, 9, 1).build();
-        this.bufferInventory = new MIInventory(itemStacks, fluidStacks, itemPos, fluidPos);
+        SlotPositions slotPositions = new SlotPositions.Builder().addSlots(0, 0, 324, 1).build();
+        SlotPositions slotPositions2 = new SlotPositions.Builder().addSlots(0, 0, 324, 1).build();
+        this.bufferInventory = new MIInventory(arrayList, arrayList2, slotPositions, slotPositions2);
         this.registerComponents(new MachineComponent[]{this.bufferInventory, this.persistentData});
     }
 
@@ -270,12 +274,12 @@ Nameable {
 
     public void clearRemoved() {
         super.clearRemoved();
-        GridHelper.onFirstTick(this, (ExtendedPatternInputHatchBlockEntity be) -> {
-            if (be.getLevel() == null || be.isRemoved()) {
+        GridHelper.onFirstTick((BlockEntity)this, extendedPatternInputHatchBlockEntity -> {
+            if (extendedPatternInputHatchBlockEntity.getLevel() == null || extendedPatternInputHatchBlockEntity.isRemoved()) {
                 return;
             }
-            be.mainNode.create(be.getLevel(), be.getBlockPos());
-            be.refreshPatterns();
+            extendedPatternInputHatchBlockEntity.mainNode.create(extendedPatternInputHatchBlockEntity.getLevel(), extendedPatternInputHatchBlockEntity.getBlockPos());
+            extendedPatternInputHatchBlockEntity.refreshPatterns();
         });
     }
 
@@ -286,25 +290,22 @@ Nameable {
         }
     }
 
-    @Override
     public Component getName() {
-        return this.customName != null
-                ? this.customName
-                : Component.translatable("block.aeind.extended_pattern_input_hatch");
+        return this.customName != null ? this.customName : Component.translatable((String)"block.aeind.advanced_extended_pattern_input_hatch");
     }
 
-    @Override
     @Nullable
     public Component getCustomName() {
         return this.customName;
     }
 
-    public void setCustomName(@Nullable Component name) {
-        this.customName = name;
+    public void setCustomName(@Nullable Component component) {
+        this.customName = component;
         this.markDirtyAndSync();
         this.refreshPatterns();
     }
 
+    @Override
     public IManagedGridNode getMainNode() {
         return this.mainNode;
     }
@@ -314,7 +315,7 @@ Nameable {
         return this.mainNode.getNode();
     }
 
-    public AECableType getCableConnectionType(Direction dir) {
+    public AECableType getCableConnectionType(Direction direction) {
         return AECableType.SMART;
     }
 
@@ -335,16 +336,17 @@ Nameable {
         return EnumSet.noneOf(Direction.class);
     }
 
+    @Override
     public void saveChanges() {
         this.setChanged();
     }
 
     public AEItemKey getTerminalIcon() {
-        return AEItemKey.of((ItemLike)((ItemLike)ModBlocks.EXTENDED_PATTERN_INPUT_HATCH.get()));
+        return AEItemKey.of((ItemLike)((ItemLike)ModBlocks.ADVANCED_EXTENDED_PATTERN_INPUT_HATCH.get()));
     }
 
     public ItemStack getMainMenuIcon() {
-        return new ItemStack((ItemLike)ModBlocks.EXTENDED_PATTERN_INPUT_HATCH.get());
+        return new ItemStack((ItemLike)ModBlocks.ADVANCED_EXTENDED_PATTERN_INPUT_HATCH.get());
     }
 
     public IItemHandler getBufferInventory() {
@@ -403,11 +405,11 @@ Nameable {
         if (!this.hasRedstoneCard()) {
             return true;
         }
-        boolean powered = this.level != null && this.level.getBestNeighborSignal(this.worldPosition) > 0;
+        boolean bl = this.level != null && this.level.getBestNeighborSignal(this.worldPosition) > 0;
         return switch (this.redstoneMode) {
-            case 1 -> powered;
+            case 1 -> bl;
             case 2 -> {
-                if (!powered) {
+                if (!bl) {
                     yield true;
                 }
                 yield false;
@@ -416,21 +418,64 @@ Nameable {
         };
     }
 
+    @Override
     public boolean canAcceptOrder() {
-        boolean blocking;
         if (!this.passesRedstone()) {
             return false;
         }
-        boolean bl = blocking = this.patternLogic.getConfigManager().getSetting(Settings.BLOCKING_MODE) == YesNo.YES || this.blockingMode != 0;
-        return !blocking || !this.bufferHasContent();
+        boolean bl = this.patternLogic.getConfigManager().getSetting(Settings.BLOCKING_MODE) == YesNo.YES || this.blockingMode != 0;
+        boolean bl2 = bl;
+        return !bl || !this.bufferHasContent();
+    }
+
+    public boolean canAcceptOrder(int n) {
+        if (!this.passesRedstone()) {
+            return false;
+        }
+        boolean bl = this.patternLogic.getConfigManager().getSetting(Settings.BLOCKING_MODE) == YesNo.YES || this.blockingMode != 0;
+        return !bl || !this.roomHasContent(n);
+    }
+
+    public boolean roomHasContent(int n) {
+        if (n < 0 || n >= 36) {
+            return false;
+        }
+        int n2 = n * 9;
+        int n3 = n2 + 9;
+        for (ConfigurableItemStack configurableItemStack : this.bufferInventory.getItemStacks().subList(n2, n3)) {
+            if (configurableItemStack.isEmpty()) continue;
+            return true;
+        }
+        for (ConfigurableFluidStack configurableItemStack : this.bufferInventory.getFluidStacks().subList(n2, n3)) {
+            if (configurableItemStack.isEmpty()) continue;
+            return true;
+        }
+        return false;
+    }
+
+    public long insertBuffer(int n, AEKey aEKey, long l, Actionable actionable) {
+        if (n < 0 || n >= 36 || l <= 0L) {
+            return 0L;
+        }
+        int n2 = n * 9;
+        int n3 = n2 + 9;
+        if (aEKey instanceof AEItemKey) {
+            AEItemKey aEItemKey = (AEItemKey)aEKey;
+            return ExtendedPatternInputHatchBlockEntity.insertItems(this.bufferInventory.getItemStacks().subList(n2, n3), aEItemKey, l, actionable);
+        }
+        if (aEKey instanceof AEFluidKey) {
+            AEFluidKey aEFluidKey = (AEFluidKey)aEKey;
+            return ExtendedPatternInputHatchBlockEntity.insertFluid(this.bufferInventory.getFluidStacks().subList(n2, n3), aEFluidKey, l, actionable != Actionable.MODULATE);
+        }
+        return 0L;
     }
 
     private boolean bufferHasContent() {
-        for (ConfigurableItemStack stack : this.bufferInventory.getItemStacks()) {
-            if (stack.isEmpty()) continue;
+        for (ConfigurableItemStack configurableItemStack : this.bufferInventory.getItemStacks()) {
+            if (configurableItemStack.isEmpty()) continue;
             return true;
         }
-        return this.bufferInventory.getFluidStacks().stream().anyMatch(s -> !s.isEmpty());
+        return this.bufferInventory.getFluidStacks().stream().anyMatch(configurableFluidStack -> !configurableFluidStack.isEmpty());
     }
 
     public boolean hasStoredMaterials() {
@@ -441,8 +486,8 @@ Nameable {
         return this.blockingMode;
     }
 
-    public void setBlockingMode(int mode) {
-        this.blockingMode = mode;
+    public void setBlockingMode(int n) {
+        this.blockingMode = n;
         this.markDirtyAndSync();
     }
 
@@ -450,237 +495,291 @@ Nameable {
         return this.redstoneMode;
     }
 
-    public void setRedstoneMode(int mode) {
-        this.redstoneMode = Math.floorMod(mode, 3);
+    public void setRedstoneMode(int n) {
+        this.redstoneMode = Math.floorMod(n, 3);
         this.markDirtyAndSync();
     }
 
     public void onUpgradesChanged() {
-        int cards = this.upgrades.getInstalledUpgrades((ItemLike)AEItems.CAPACITY_CARD);
-        long cap = Math.min(Integer.MAX_VALUE * (long)(1 << Math.min(cards, 2)), Integer.MAX_VALUE);
-        for (ConfigurableFluidStack fluid : this.bufferInventory.getFluidStacks()) {
-            fluid.setCapacity(cap);
+        int n = this.upgrades.getInstalledUpgrades((ItemLike)AEItems.CAPACITY_CARD);
+        long l = Long.MAX_VALUE;
+        for (ConfigurableFluidStack configurableFluidStack : this.bufferInventory.getFluidStacks()) {
+            configurableFluidStack.setCapacity(l);
         }
         this.markDirtyAndSync();
     }
 
-    public long countInBuffer(AEKey key) {
-        if (key instanceof AEItemKey) {
-            AEItemKey itemKey = (AEItemKey)key;
-            long count = 0L;
-            IItemHandler handler = this.bufferInventory.itemStorage.itemHandler;
-            for (int i = 0; i < handler.getSlots(); ++i) {
-                ItemStack stack = handler.getStackInSlot(i);
-                if (stack.isEmpty() || !itemKey.matches(stack)) continue;
-                count += (long)stack.getCount();
+    public long countInBuffer(AEKey aEKey) {
+        if (aEKey instanceof AEItemKey) {
+            AEItemKey aEItemKey = (AEItemKey)aEKey;
+            ItemVariant itemVariant = ItemVariant.of((ItemStack)aEItemKey.toStack(1));
+            long l = 0L;
+            for (ConfigurableItemStack stack : this.bufferInventory.getItemStacks()) {
+                if (stack.isEmpty() || !((ItemVariant)stack.getResource()).equals((Object)itemVariant)) continue;
+                l = ExtendedPatternInputHatchBlockEntity.saturatedAdd(l, stack.getAmount());
             }
-            return count;
+            return l;
         }
-        if (key instanceof AEFluidKey) {
-            AEFluidKey fluidKey = (AEFluidKey)key;
-            long count = 0L;
-            IFluidHandler handler = this.bufferInventory.fluidStorage.fluidHandler;
-            for (int i = 0; i < handler.getTanks(); ++i) {
-                FluidStack fluid = handler.getFluidInTank(i);
-                if (!fluidKey.matches(fluid)) continue;
-                count += (long)fluid.getAmount();
+        if (aEKey instanceof AEFluidKey) {
+            AEFluidKey aEFluidKey = (AEFluidKey)aEKey;
+            long l = 0L;
+            for (ConfigurableFluidStack stack : this.bufferInventory.getFluidStacks()) {
+                if (stack.isEmpty() || ((FluidVariant)stack.getResource()).getFluid() != aEFluidKey.getFluid()) continue;
+                l = ExtendedPatternInputHatchBlockEntity.saturatedAdd(l, stack.getAmount());
             }
-            return count;
+            return l;
         }
         return 0L;
     }
 
-    public long insertBuffer(AEKey what, long amount, Actionable mode) {
-        if (amount <= 0L) {
+    @Override
+    public long insertBuffer(AEKey aEKey, long l, Actionable actionable) {
+        if (l <= 0L) {
             return 0L;
         }
-        if (what instanceof AEItemKey) {
-            AEItemKey itemKey = (AEItemKey)what;
-            return this.insertItems(itemKey, amount, mode);
+        if (aEKey instanceof AEItemKey) {
+            AEItemKey aEItemKey = (AEItemKey)aEKey;
+            return this.insertItems(aEItemKey, l, actionable);
         }
-        if (what instanceof AEFluidKey) {
-            AEFluidKey fluidKey = (AEFluidKey)what;
-            return this.insertFluid(fluidKey, amount, mode != Actionable.MODULATE);
+        if (aEKey instanceof AEFluidKey) {
+            AEFluidKey aEFluidKey = (AEFluidKey)aEKey;
+            return this.insertFluid(aEFluidKey, l, actionable != Actionable.MODULATE);
         }
         return 0L;
     }
 
-    private long insertFluid(AEFluidKey fluidKey, long amount, boolean simulate) {
-        long capped = Math.min(amount, Integer.MAX_VALUE);
-        if (capped <= 0L) {
+    private long insertFluid(AEFluidKey aEFluidKey, long l, boolean bl) {
+        return ExtendedPatternInputHatchBlockEntity.insertFluid(this.bufferInventory.getFluidStacks(), aEFluidKey, l, bl);
+    }
+
+    private static long insertFluid(List<ConfigurableFluidStack> list, AEFluidKey aEFluidKey, long l, boolean bl) {
+        long l2 = l;
+        if (l2 <= 0L) {
             return 0L;
         }
-        List<ConfigurableFluidStack> stacks = this.bufferInventory.getFluidStacks();
-        for (ConfigurableFluidStack stack : stacks) {
-            if (stack.isEmpty() || ((FluidVariant)stack.getResource()).getFluid() != fluidKey.getFluid()) continue;
-            long space = stack.getCapacity() - stack.getAmount();
-            if (space <= 0L) {
+        for (ConfigurableFluidStack configurableFluidStack : list) {
+            if (configurableFluidStack.isEmpty() || ((FluidVariant)configurableFluidStack.getResource()).getFluid() != aEFluidKey.getFluid()) continue;
+            long l3 = configurableFluidStack.getCapacity() - configurableFluidStack.getAmount();
+            if (l3 <= 0L) {
                 return 0L;
             }
-            long toAdd = Math.min(capped, space);
-            if (!simulate) {
-                stack.increment(toAdd);
+            long l4 = Math.min(l2, l3);
+            if (!bl) {
+                configurableFluidStack.increment(l4);
             }
-            return toAdd;
+            return l4;
         }
-        for (ConfigurableFluidStack stack : stacks) {
-            if (!stack.isEmpty()) continue;
-            long toAdd = Math.min(capped, stack.getCapacity());
-            if (!simulate) {
-                stack.setKey(FluidVariant.of((Fluid)fluidKey.getFluid()));
-                stack.increment(toAdd);
+        for (ConfigurableFluidStack configurableFluidStack : list) {
+            if (!configurableFluidStack.isEmpty()) continue;
+            long l5 = Math.min(l2, configurableFluidStack.getCapacity());
+            if (!bl) {
+                configurableFluidStack.setKey((TransferVariant)FluidVariant.of((Fluid)aEFluidKey.getFluid()));
+                configurableFluidStack.increment(l5);
             }
-            return toAdd;
+            return l5;
         }
         return 0L;
     }
 
-    private long insertItems(AEItemKey key, long amount, Actionable mode) {
-        if (amount <= 0L) {
-            return 0L;
-        }
-        ItemVariant variant = ItemVariant.of((ItemStack)key.toStack(1));
-        long placed = 0L;
-        boolean simulate = mode != Actionable.MODULATE;
-        for (ConfigurableItemStack stack : this.bufferInventory.getItemStacks()) {
-            long toAdd;
-            if (placed >= amount) break;
-            if (!stack.isEmpty() ? !((ItemVariant)stack.getResource()).equals(variant) : !stack.isResourceAllowedByLock(key.getItem())) continue;
-            long space = Integer.MAX_VALUE - stack.getAmount();
-            if (space <= 0L || (toAdd = Math.min(amount - placed, space)) <= 0L) continue;
-            if (!simulate) {
-                stack.setKey(variant);
-                stack.increment(toAdd);
-            }
-            placed += toAdd;
-        }
-        return placed;
+    private long insertItems(AEItemKey aEItemKey, long l, Actionable actionable) {
+        return ExtendedPatternInputHatchBlockEntity.insertItems(this.bufferInventory.getItemStacks(), aEItemKey, l, actionable);
     }
 
-    public long extractBuffer(AEKey what, long amount, Actionable mode) {
-        if (amount <= 0L) {
+    private static long insertItems(List<ConfigurableItemStack> list, AEItemKey aEItemKey, long l, Actionable actionable) {
+        if (l <= 0L) {
             return 0L;
         }
-        if (what instanceof AEItemKey) {
-            AEItemKey itemKey = (AEItemKey)what;
+        ItemVariant itemVariant = ItemVariant.of((ItemStack)aEItemKey.toStack(1));
+        long l2 = 0L;
+        boolean bl = actionable != Actionable.MODULATE;
+        for (ConfigurableItemStack configurableItemStack : list) {
+            long l3;
+            if (l2 >= l) break;
+            if (configurableItemStack.isEmpty() ? !configurableItemStack.isResourceAllowedByLock((Object)aEItemKey.getItem()) : !((ItemVariant)configurableItemStack.getResource()).equals((Object)itemVariant)) continue;
+            long l4 = Long.MAX_VALUE - configurableItemStack.getAmount();
+            if (l4 <= 0L || (l3 = Math.min(l - l2, l4)) <= 0L) continue;
+            if (!bl) {
+                configurableItemStack.setKey(itemVariant);
+                configurableItemStack.increment(l3);
+            }
+            l2 += l3;
+        }
+        return l2;
+    }
+
+    public long extractBuffer(AEKey aEKey, long l, Actionable actionable) {
+        if (l <= 0L) {
+            return 0L;
+        }
+        if (aEKey instanceof AEItemKey) {
+            AEItemKey aEItemKey = (AEItemKey)aEKey;
+            ItemVariant itemVariant = ItemVariant.of((ItemStack)aEItemKey.toStack(1));
+            long l2 = 0L;
+            for (ConfigurableItemStack stack : this.bufferInventory.getItemStacks()) {
+                if (l2 >= l) break;
+                if (stack.isEmpty() || !((ItemVariant)stack.getResource()).equals((Object)itemVariant)) continue;
+                long extracted = Math.min(l - l2, stack.getAmount());
+                if (actionable == Actionable.MODULATE) {
+                    stack.decrement(extracted);
+                }
+                l2 += extracted;
+            }
+            return l2;
+        }
+        if (aEKey instanceof AEFluidKey) {
+            AEFluidKey aEFluidKey = (AEFluidKey)aEKey;
             long extracted = 0L;
-            boolean simulate = mode != Actionable.MODULATE;
-            IItemHandler handler = this.bufferInventory.itemStorage.itemHandler;
-            for (int slot = 0; slot < handler.getSlots() && extracted < amount; ++slot) {
-                ItemStack current = handler.getStackInSlot(slot);
-                if (current.isEmpty() || !itemKey.matches(current)) continue;
-                int take = (int)Math.min(amount - extracted, (long)current.getCount());
-                ItemStack got = handler.extractItem(slot, take, simulate);
-                extracted += (long)got.getCount();
+            for (ConfigurableFluidStack stack : this.bufferInventory.getFluidStacks()) {
+                if (extracted >= l) break;
+                if (stack.isEmpty() || ((FluidVariant)stack.getResource()).getFluid() != aEFluidKey.getFluid()) continue;
+                long amount = Math.min(l - extracted, stack.getAmount());
+                if (actionable == Actionable.MODULATE) {
+                    stack.decrement(amount);
+                }
+                extracted += amount;
             }
             return extracted;
         }
-        if (what instanceof AEFluidKey) {
-            AEFluidKey fluidKey = (AEFluidKey)what;
-            long capped = Math.min(amount, Integer.MAX_VALUE);
-            FluidStack drained = this.bufferInventory.fluidStorage.fluidHandler.drain(fluidKey.toStack((int)capped), mode == Actionable.MODULATE ? IFluidHandler.FluidAction.EXECUTE : IFluidHandler.FluidAction.SIMULATE);
-            return drained.getAmount();
-        }
         return 0L;
     }
 
+    private static long saturatedAdd(long left, long right) {
+        return Long.MAX_VALUE - left < right ? Long.MAX_VALUE : left + right;
+    }
+
+    @Override
     public boolean returnAllBufferToNetwork() {
-        return this.returnBufferToNetwork(key -> true);
+        return this.returnBufferToNetwork(aEKey -> true);
     }
 
+    public void returnRoomToNetwork(int n) {
+        if (this.level == null || this.level.isClientSide || n < 0 || n >= 36) {
+            return;
+        }
+        IGridNode iGridNode = this.mainNode.getNode();
+        if (iGridNode == null || !iGridNode.isActive()) {
+            return;
+        }
+        MEStorage mEStorage = iGridNode.getGrid().getStorageService().getInventory();
+        MachineSource machineSource = new MachineSource((IActionHost)this);
+        int n2 = n * 9;
+        int n3 = n2 + 9;
+        for (ConfigurableItemStack configurableItemStack : this.bufferInventory.getItemStacks().subList(n2, n3)) {
+            if (configurableItemStack.isEmpty()) continue;
+            configurableItemStack.decrement(mEStorage.insert((AEKey)AEItemKey.of(((ItemVariant)configurableItemStack.getResource()).toStack(1)), configurableItemStack.getAmount(), Actionable.MODULATE, (IActionSource)machineSource));
+        }
+        for (ConfigurableFluidStack configurableItemStack : this.bufferInventory.getFluidStacks().subList(n2, n3)) {
+            if (configurableItemStack.isEmpty()) continue;
+            AEFluidKey aEFluidKey = AEFluidKey.of((Fluid)((FluidVariant)configurableItemStack.getResource()).getFluid());
+            configurableItemStack.decrement(mEStorage.insert((AEKey)aEFluidKey, configurableItemStack.getAmount(), Actionable.MODULATE, (IActionSource)machineSource));
+        }
+        this.setChanged();
+    }
+
+    @Override
+    public List<ThreadIsolationRoom> aeind$isolatedInputRooms() {
+        ArrayList<ThreadIsolationRoom> arrayList = new ArrayList<ThreadIsolationRoom>(36);
+        for (int i = 0; i < 36; ++i) {
+            int n = i * 9;
+            int n2 = n + 9;
+            arrayList.add(new ThreadIsolationRoom("advanced-extended:" + this.getBlockPos().asLong() + ":" + i, this.bufferInventory.getItemStacks().subList(n, n2), this.bufferInventory.getFluidStacks().subList(n, n2)));
+        }
+        return arrayList;
+    }
+
+    @Override
     public boolean returnUnusedBufferToNetwork() {
-        Set<AEKey> allowed = this.patternLogic.getPatternInputKeys();
-        return this.returnBufferToNetwork(key -> !allowed.contains(key.dropSecondary()));
+        Set<AEKey> set = this.patternLogic.getPatternInputKeys();
+        return this.returnBufferToNetwork(aEKey -> !set.contains(aEKey.dropSecondary()));
     }
 
-    private boolean returnBufferToNetwork(Predicate<AEKey> filter) {
-        long pushed;
+    private boolean returnBufferToNetwork(Predicate<AEKey> predicate) {
+        long l;
+        AEItemKey aEItemKey;
         if (this.level == null || this.level.isClientSide) {
             return false;
         }
-        IGridNode node = this.mainNode.getNode();
-        if (node == null || !node.isActive()) {
+        IGridNode iGridNode = this.mainNode.getNode();
+        if (iGridNode == null || !iGridNode.isActive()) {
             return false;
         }
-        MEStorage storage = node.getGrid().getStorageService().getInventory();
-        MachineSource source = new MachineSource((IActionHost)this);
-        boolean changed = false;
-        for (ConfigurableItemStack stack : this.bufferInventory.getItemStacks()) {
-            AEItemKey key = AEItemKey.of(stack.toStack());
-            if (stack.isEmpty() || !filter.test(key) || (pushed = storage.insert(key, stack.getAmount(), Actionable.MODULATE, (IActionSource)source)) <= 0L) continue;
-            stack.decrement(pushed);
-            changed = true;
+        MEStorage mEStorage = iGridNode.getGrid().getStorageService().getInventory();
+        MachineSource machineSource = new MachineSource((IActionHost)this);
+        boolean bl = false;
+        for (ConfigurableItemStack configurableItemStack : this.bufferInventory.getItemStacks()) {
+            aEItemKey = AEItemKey.of(((ItemVariant)configurableItemStack.getResource()).toStack(1));
+            if (configurableItemStack.isEmpty() || !predicate.test((AEKey)aEItemKey) || (l = mEStorage.insert((AEKey)aEItemKey, configurableItemStack.getAmount(), Actionable.MODULATE, (IActionSource)machineSource)) <= 0L) continue;
+            configurableItemStack.decrement(l);
+            bl = true;
         }
-        for (ConfigurableFluidStack stack : this.bufferInventory.getFluidStacks()) {
-            if (stack.isEmpty()) continue;
-            AEFluidKey key = AEFluidKey.of(((FluidVariant)stack.getResource()).getFluid());
-            if (!filter.test(key) || (pushed = storage.insert(key, stack.getAmount(), Actionable.MODULATE, (IActionSource)source)) <= 0L) continue;
-            stack.decrement(pushed);
-            changed = true;
+        for (ConfigurableFluidStack configurableItemStack : this.bufferInventory.getFluidStacks()) {
+            if (configurableItemStack.isEmpty() || !predicate.test((AEKey)(aEItemKey = AEFluidKey.of((Fluid)((FluidVariant)configurableItemStack.getResource()).getFluid()))) || (l = mEStorage.insert((AEKey)aEItemKey, configurableItemStack.getAmount(), Actionable.MODULATE, (IActionSource)machineSource)) <= 0L) continue;
+            configurableItemStack.decrement(l);
+            bl = true;
         }
-        if (changed) {
+        if (bl) {
             this.setChanged();
         }
-        return changed;
+        return bl;
     }
 
-    public void returnToNetwork(AEKey what, long amount) {
-        if (this.level == null || this.level.isClientSide || amount <= 0L) {
+    @Override
+    public void returnToNetwork(AEKey aEKey, long l) {
+        if (this.level == null || this.level.isClientSide || l <= 0L) {
             return;
         }
-        IGridNode node = this.mainNode.getNode();
-        if (node == null || !node.isActive()) {
+        IGridNode iGridNode = this.mainNode.getNode();
+        if (iGridNode == null || !iGridNode.isActive()) {
             return;
         }
-        node.getGrid().getStorageService().getInventory().insert(what, amount, Actionable.MODULATE, (IActionSource)new MachineSource((IActionHost)this));
+        iGridNode.getGrid().getStorageService().getInventory().insert(aEKey, l, Actionable.MODULATE, (IActionSource)new MachineSource((IActionHost)this));
     }
 
     public void refreshPatterns() {
         this.patternLogic.updatePatterns();
     }
 
-    public static void serverTick(Level level, BlockPos pos, BlockState state, ExtendedPatternInputHatchBlockEntity blockEntity) {
+    public static void serverTick(Level level, BlockPos blockPos, BlockState blockState, ExtendedPatternInputHatchBlockEntity extendedPatternInputHatchBlockEntity) {
         if (level.isClientSide) {
             return;
         }
-        ++blockEntity.tickCount;
-        if (blockEntity.tickCount % 20 != 0) {
+        ++extendedPatternInputHatchBlockEntity.tickCount;
+        if (extendedPatternInputHatchBlockEntity.tickCount % 20 != 0) {
             return;
         }
-        blockEntity.doWork();
+        extendedPatternInputHatchBlockEntity.doWork();
     }
 
     private void doWork() {
         if (this.level == null || this.level.isClientSide) {
             return;
         }
-        boolean changed = false;
-        if (changed |= this.patternLogic.flushBufferSendList()) {
+        boolean bl = false;
+        if (bl |= this.patternLogic.flushBufferSendList()) {
             this.setChanged();
         }
     }
 
     public NonNullList<ItemStack> getDropItems() {
-        NonNullList drops = NonNullList.create();
-        this.patternLogic.addDrops((List)drops);
+        NonNullList nonNullList = NonNullList.create();
+        this.patternLogic.addDrops((List<ItemStack>)nonNullList);
         for (int i = 0; i < this.upgrades.size(); ++i) {
-            ItemStack card = this.upgrades.getStackInSlot(i);
-            if (card.isEmpty()) continue;
-            drops.add((Object)card.copy());
+            ItemStack itemStack = this.upgrades.getStackInSlot(i);
+            if (itemStack.isEmpty()) continue;
+            nonNullList.add((Object)itemStack.copy());
         }
-        for (ConfigurableItemStack stack : this.bufferInventory.getItemStacks()) {
-            if (stack.isEmpty()) continue;
-            ItemStack copy = stack.toStack();
-            int max = Math.max(1, copy.getMaxStackSize());
-            while (!copy.isEmpty()) {
-                int count = Math.min(copy.getCount(), max);
-                ItemStack part = copy.copy();
-                part.setCount(count);
-                drops.add((Object)part);
-                copy.shrink(count);
+        for (ConfigurableItemStack configurableItemStack : this.bufferInventory.getItemStacks()) {
+            if (configurableItemStack.isEmpty()) continue;
+            ItemVariant itemVariant = (ItemVariant)configurableItemStack.getResource();
+            long remaining = configurableItemStack.getAmount();
+            int maxStackSize = Math.max(1, itemVariant.getMaxStackSize());
+            while (remaining > 0L) {
+                int count = (int)Math.min(remaining, (long)maxStackSize);
+                nonNullList.add((Object)itemVariant.toStack(count));
+                remaining -= count;
             }
         }
-        return drops;
+        return nonNullList;
     }
 
     public ContainerData getContainerData() {

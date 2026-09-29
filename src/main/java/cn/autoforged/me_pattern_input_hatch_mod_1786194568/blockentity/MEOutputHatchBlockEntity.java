@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- *
+ * 
  * Could not load the following classes:
  *  appeng.api.config.Actionable
  *  appeng.api.networking.GridFlags
@@ -76,6 +76,7 @@ import aztech.modern_industrialization.machines.models.MachineModelClientData;
 import aztech.modern_industrialization.machines.multiblocks.HatchBlockEntity;
 import aztech.modern_industrialization.machines.multiblocks.HatchType;
 import aztech.modern_industrialization.machines.multiblocks.HatchTypes;
+import aztech.modern_industrialization.thirdparty.fabrictransfer.api.item.ItemVariant;
 import cn.autoforged.me_pattern_input_hatch_mod_1786194568.block.ModBlocks;
 import cn.autoforged.me_pattern_input_hatch_mod_1786194568.blockentity.ModBlockEntities;
 import java.util.ArrayList;
@@ -101,43 +102,47 @@ public class MEOutputHatchBlockEntity
 extends HatchBlockEntity
 implements IInWorldGridNodeHost,
 IActionHost {
-    public static final int BUFFER_ITEM_SLOTS = 9;
-    public static final int BUFFER_FLUID_TANKS = 9;
-    public static final long FLUID_CAPACITY = Integer.MAX_VALUE;
+    public static final int BUFFER_ITEM_SLOTS = 36;
+    public static final int BUFFER_FLUID_TANKS = 36;
+    public static final long FLUID_CAPACITY = Long.MAX_VALUE;
     public static final int TICK_RATE = 1;
-    private final IManagedGridNode mainNode = GridHelper.createManagedNode(this, NODE_LISTENER).setVisualRepresentation(new ItemStack((ItemLike)ModBlocks.ME_OUTPUT_HATCH.get())).setInWorldNode(true).setTagName("me_output_hatch_node").setFlags(new GridFlags[]{GridFlags.REQUIRE_CHANNEL}).setExposedOnSides(EnumSet.allOf(Direction.class));
+    private final IManagedGridNode mainNode = GridHelper.createManagedNode((Object)((Object)this), NODE_LISTENER).setVisualRepresentation(new ItemStack((ItemLike)ModBlocks.ME_OUTPUT_HATCH.get())).setInWorldNode(true).setTagName("me_output_hatch_node").setFlags(new GridFlags[]{GridFlags.REQUIRE_CHANNEL}).setExposedOnSides(EnumSet.allOf(Direction.class));
     private final MIInventory bufferInventory;
+    private final AEKeyLongStorage outputBuffer = new AEKeyLongStorage(this::setChanged);
     private final MachineComponent persistentData = new MachineComponent(){
 
-        public void writeNbt(CompoundTag tag, HolderLookup.Provider registries) {
-            MEOutputHatchBlockEntity.this.mainNode.saveToNBT(tag);
+        public void writeNbt(CompoundTag compoundTag, HolderLookup.Provider provider) {
+            MEOutputHatchBlockEntity.this.mainNode.saveToNBT(compoundTag);
+            compoundTag.put("aeindOutputBuffer", MEOutputHatchBlockEntity.this.outputBuffer.writeNbt(provider));
         }
 
-        public void readNbt(CompoundTag tag, HolderLookup.Provider registries, boolean isUpgradingMachine) {
-            MEOutputHatchBlockEntity.this.mainNode.loadFromNBT(tag);
+        public void readNbt(CompoundTag compoundTag, HolderLookup.Provider provider, boolean bl) {
+            MEOutputHatchBlockEntity.this.mainNode.loadFromNBT(compoundTag);
+            MEOutputHatchBlockEntity.this.outputBuffer.readNbt(compoundTag.getList("aeindOutputBuffer", 10), provider);
+            MEOutputHatchBlockEntity.this.ensureLongOutputSlots();
         }
     };
     private int tickCount = 0;
     private static final IGridNodeListener<MEOutputHatchBlockEntity> NODE_LISTENER = new IGridNodeListener<MEOutputHatchBlockEntity>(){
 
-        public void onSaveChanges(MEOutputHatchBlockEntity owner, IGridNode node) {
-            owner.setChanged();
+        public void onSaveChanges(MEOutputHatchBlockEntity mEOutputHatchBlockEntity, IGridNode iGridNode) {
+            mEOutputHatchBlockEntity.setChanged();
         }
     };
 
-    public MEOutputHatchBlockEntity(BlockPos pos, BlockState blockState) {
-        super(new BEP((BlockEntityType)ModBlockEntities.ME_OUTPUT_HATCH.get(), pos, blockState), new MachineGuiParameters.Builder(ResourceLocation.fromNamespaceAndPath((String)"aeind", (String)"me_output_hatch"), true).build(), OrientationComponent.Params.noFacing((boolean)true, (boolean)false));
-        ArrayList<ConfigurableItemStack> itemStacks = new ArrayList<ConfigurableItemStack>(9);
-        for (int i = 0; i < 9; ++i) {
-            itemStacks.add(ConfigurableItemStack.standardOutputSlot());
+    public MEOutputHatchBlockEntity(BlockPos blockPos, BlockState blockState) {
+        super(new BEP((BlockEntityType)ModBlockEntities.ME_OUTPUT_HATCH.get(), blockPos, blockState), new MachineGuiParameters.Builder(ResourceLocation.fromNamespaceAndPath((String)"aeind", (String)"me_output_hatch"), true).backgroundHeight(200).build(), OrientationComponent.Params.noFacing((boolean)true, (boolean)false));
+        ArrayList<ConfigurableItemStack> arrayList = new ArrayList<ConfigurableItemStack>(36);
+        for (int i = 0; i < 36; ++i) {
+            arrayList.add(new LongOutputItemStack());
         }
-        ArrayList<ConfigurableFluidStack> fluidStacks = new ArrayList<ConfigurableFluidStack>(9);
-        for (int i = 0; i < 9; ++i) {
-            fluidStacks.add(ConfigurableFluidStack.standardOutputSlot((long)Integer.MAX_VALUE));
+        ArrayList<ConfigurableFluidStack> arrayList2 = new ArrayList<ConfigurableFluidStack>(36);
+        for (int i = 0; i < 36; ++i) {
+            arrayList2.add(ConfigurableFluidStack.standardOutputSlot(Long.MAX_VALUE));
         }
-        SlotPositions itemPos = new SlotPositions.Builder().addSlots(0, 0, 9, 1).build();
-        SlotPositions fluidPos = new SlotPositions.Builder().addSlots(0, 0, 9, 1).build();
-        this.bufferInventory = new MIInventory(itemStacks, fluidStacks, itemPos, fluidPos);
+        SlotPositions slotPositions = new SlotPositions.Builder().addSlots(8, 18, 9, 4).build();
+        SlotPositions slotPositions2 = new SlotPositions.Builder().addSlots(8, 18, 9, 4).build();
+        this.bufferInventory = new MIInventory(arrayList, arrayList2, slotPositions, slotPositions2);
         this.registerComponents(new MachineComponent[]{this.bufferInventory, this.persistentData});
     }
 
@@ -153,11 +158,11 @@ IActionHost {
 
     public void clearRemoved() {
         super.clearRemoved();
-        GridHelper.onFirstTick(this, (MEOutputHatchBlockEntity be) -> {
-            if (be.getLevel() == null || be.isRemoved()) {
+        GridHelper.onFirstTick((BlockEntity)this, mEOutputHatchBlockEntity -> {
+            if (mEOutputHatchBlockEntity.getLevel() == null || mEOutputHatchBlockEntity.isRemoved()) {
                 return;
             }
-            be.mainNode.create(be.getLevel(), be.getBlockPos());
+            mEOutputHatchBlockEntity.mainNode.create(mEOutputHatchBlockEntity.getLevel(), mEOutputHatchBlockEntity.getBlockPos());
         });
     }
 
@@ -177,7 +182,7 @@ IActionHost {
         return this.mainNode.getNode();
     }
 
-    public AECableType getCableConnectionType(Direction dir) {
+    public AECableType getCableConnectionType(Direction direction) {
         return AECableType.SMART;
     }
 
@@ -196,6 +201,10 @@ IActionHost {
 
     public MIInventory getBuffer() {
         return this.bufferInventory;
+    }
+
+    public AEKeyLongStorage getOutputBuffer() {
+        return this.outputBuffer;
     }
 
     public HatchType getHatchType() {
@@ -222,64 +231,87 @@ IActionHost {
         list.addAll(0, this.bufferInventory.getFluidStacks());
     }
 
-    public static void serverTick(Level level, BlockPos pos, BlockState state, MEOutputHatchBlockEntity blockEntity) {
+    public static void serverTick(Level level, BlockPos blockPos, BlockState blockState, MEOutputHatchBlockEntity mEOutputHatchBlockEntity) {
         if (level.isClientSide) {
             return;
         }
-        ++blockEntity.tickCount;
-        if (blockEntity.tickCount % 1 != 0) {
+        ++mEOutputHatchBlockEntity.tickCount;
+        if (mEOutputHatchBlockEntity.tickCount % 1 != 0) {
             return;
         }
-        blockEntity.doWork();
+        mEOutputHatchBlockEntity.doWork();
     }
 
     private void doWork() {
         if (this.level == null || this.level.isClientSide) {
             return;
         }
-        IGridNode node = this.mainNode.getNode();
-        if (node == null || !node.isActive()) {
+        this.ensureLongOutputSlots();
+        this.collectMachineOutputs();
+        IGridNode iGridNode = this.mainNode.getNode();
+        if (iGridNode == null || !iGridNode.isActive()) {
             return;
         }
-        MachineSource source = new MachineSource((IActionHost)this);
-        MEStorage storage = this.mainNode.getGrid().getStorageService().getInventory();
-        boolean changed = false;
-        IItemHandler itemHandler = this.bufferInventory.itemStorage.itemHandler;
-        for (int i = 0; i < itemHandler.getSlots(); ++i) {
-            long toPush;
-            AEItemKey key;
-            long pushed;
-            ItemStack stack = itemHandler.getStackInSlot(i);
-            if (stack.isEmpty() || (pushed = storage.insert((AEKey)(key = AEItemKey.of((ItemStack)stack)), toPush = (long)stack.getCount(), Actionable.MODULATE, (IActionSource)source)) <= 0L) continue;
-            itemHandler.extractItem(i, (int)Math.min(pushed, Integer.MAX_VALUE), false);
-            changed = true;
+        MachineSource machineSource = new MachineSource((IActionHost)this);
+        MEStorage mEStorage = this.mainNode.getGrid().getStorageService().getInventory();
+        this.outputBuffer.flushTo(mEStorage, (IActionSource)machineSource);
+    }
+
+    void collectMachineOutputs() {
+        this.ensureLongOutputSlots();
+        for (ConfigurableItemStack stack : this.bufferInventory.getItemStacks()) {
+            if (stack.isEmpty() || stack.getAmount() <= 0L) {
+                continue;
+            }
+            AEItemKey key = AEItemKey.of(((ItemVariant)stack.getResource()).toStack(1));
+            long inserted = this.outputBuffer.insert((AEKey)key, stack.getAmount(), Actionable.MODULATE);
+            if (inserted > 0L) {
+                stack.decrement(inserted);
+                if (stack.isEmpty()) {
+                    stack.disableMachineLock();
+                }
+            }
         }
-        IFluidHandler fluidHandler = this.bufferInventory.fluidStorage.fluidHandler;
-        for (int i = 0; i < fluidHandler.getTanks(); ++i) {
-            long toPush;
-            AEFluidKey key;
-            long pushed;
-            FluidStack fluid = fluidHandler.getFluidInTank(i);
-            if (fluid.isEmpty() || (pushed = storage.insert((AEKey)(key = AEFluidKey.of((FluidStack)fluid)), toPush = (long)fluid.getAmount(), Actionable.MODULATE, (IActionSource)source)) <= 0L) continue;
-            fluidHandler.drain(fluid.copyWithAmount((int)Math.min(pushed, Integer.MAX_VALUE)), IFluidHandler.FluidAction.EXECUTE);
-            changed = true;
-        }
-        if (changed) {
-            this.setChanged();
+        for (ConfigurableFluidStack stack : this.bufferInventory.getFluidStacks()) {
+            if (stack.isEmpty() || stack.getAmount() <= 0L) {
+                continue;
+            }
+            AEFluidKey key = AEFluidKey.of(stack.toStack());
+            long inserted = this.outputBuffer.insert((AEKey)key, stack.getAmount(), Actionable.MODULATE);
+            if (inserted > 0L) {
+                stack.decrement(inserted);
+                if (stack.isEmpty()) {
+                    stack.disableMachineLock();
+                }
+            }
         }
     }
 
-    public void addOutputDrops(List<ItemStack> drops) {
-        for (ConfigurableItemStack stack : this.bufferInventory.getItemStacks()) {
-            if (stack.isEmpty()) continue;
-            ItemStack copy = stack.toStack();
-            int max = Math.max(1, copy.getMaxStackSize());
-            while (!copy.isEmpty()) {
-                int count = Math.min(copy.getCount(), max);
-                ItemStack part = copy.copy();
-                part.setCount(count);
-                drops.add(part);
-                copy.shrink(count);
+    private void ensureLongOutputSlots() {
+        List<ConfigurableItemStack> itemStacks = this.bufferInventory.getItemStacks();
+        for (int i = 0; i < itemStacks.size(); ++i) {
+            ConfigurableItemStack stack = itemStacks.get(i);
+            if (!(stack instanceof LongOutputItemStack)) {
+                itemStacks.set(i, new LongOutputItemStack(stack));
+            }
+        }
+        for (ConfigurableFluidStack stack : this.bufferInventory.getFluidStacks()) {
+            stack.setCapacity(Long.MAX_VALUE);
+        }
+    }
+
+    public void addOutputDrops(List<ItemStack> list) {
+        this.collectMachineOutputs();
+        this.outputBuffer.addItemDrops(list);
+        for (ConfigurableItemStack configurableItemStack : this.bufferInventory.getItemStacks()) {
+            if (configurableItemStack.isEmpty()) continue;
+            ItemVariant itemVariant = (ItemVariant)configurableItemStack.getResource();
+            long remaining = configurableItemStack.getAmount();
+            int maxStackSize = Math.max(1, itemVariant.getMaxStackSize());
+            while (remaining > 0L) {
+                int count = (int)Math.min(remaining, (long)maxStackSize);
+                list.add(itemVariant.toStack(count));
+                remaining -= count;
             }
         }
     }

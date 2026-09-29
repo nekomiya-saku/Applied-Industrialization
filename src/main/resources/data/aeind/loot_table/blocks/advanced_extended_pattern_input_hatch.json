@@ -1,0 +1,21 @@
+{
+  "neoforge:conditions": [
+    { "type": "neoforge:mod_loaded", "modid": "extendedae" }
+  ],
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "bonus_rolls": 0.0,
+      "conditions": [{ "condition": "minecraft:survives_explosion" }],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "aeind:advanced_extended_pattern_input_hatch",
+          "functions": [{ "function": "minecraft:copy_name", "source": "block_entity" }]
+        }
+      ],
+      "rolls": 1.0
+    }
+  ],
+  "random_sequence": "aeind:blocks/advanced_extended_pattern_input_hatch"
+}
