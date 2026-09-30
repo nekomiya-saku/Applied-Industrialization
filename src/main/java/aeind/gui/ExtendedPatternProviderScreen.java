@@ -1,7 +1,9 @@
 package aeind.gui;
 
 import appeng.client.gui.implementations.PatternProviderScreen;
+import appeng.client.gui.layout.SlotGridLayout;
 import appeng.client.gui.style.ScreenStyle;
+import appeng.client.gui.style.SlotPosition;
 import aeind.network.ServerboundReturnMaterialPayload;
 import java.util.Objects;
 import net.minecraft.client.gui.components.Button;
@@ -9,7 +11,6 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.Slot;
 import appeng.menu.SlotSemantics;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -23,6 +24,11 @@ public class ExtendedPatternProviderScreen extends PatternProviderScreen<Extende
 
    public ExtendedPatternProviderScreen(ExtendedPatternProviderMenu var1, Inventory var2, Component var3, ScreenStyle var4) {
       super(var1, var2, var3, var4);
+      SlotPosition catalystPosition = new SlotPosition();
+      catalystPosition.setLeft(8);
+      catalystPosition.setTop(127);
+      catalystPosition.setGrid(SlotGridLayout.HORIZONTAL);
+      var4.getSlots().put(ModMenuTypes.CATALYST.id(), catalystPosition);
       this.setTextContent("dialog_title", Component.translatable("block.aeind.advanced_extended_pattern_input_hatch"));
    }
 
@@ -31,12 +37,6 @@ public class ExtendedPatternProviderScreen extends PatternProviderScreen<Extende
       super.init();
       this.setSlotsHidden(SlotSemantics.STORAGE, true);
       this.setTextContent("interface_stored_items", Component.translatable("gui.aeind.catalysts"));
-      int catalystIndex = 0;
-      for (Slot slot : this.menu.getSlots(ModMenuTypes.CATALYST)) {
-         slot.x = 8 + (catalystIndex % 9) * 18;
-         slot.y = 127 + (catalystIndex / 9) * 18;
-         catalystIndex++;
-      }
       this.returnMaterialButton = Button.builder(
             Component.translatable("button.aeind.return_material.label"), var0 -> PacketDistributor.sendToServer(new ServerboundReturnMaterialPayload())
          )
