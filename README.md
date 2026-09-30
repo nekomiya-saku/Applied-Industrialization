@@ -14,7 +14,7 @@ gradlew.bat build
 ```
 
 Required runtime dependencies are Applied Energistics 2 and Modern Industrialization.
-Jade, ExtendedAE, and Productive Bees are optional integrations.
+ExtendedAE are optional integrations.
 
 The source tree and resources are reconstructed from the compatible
 Applied-Industrialization 1.2.7 binary release. Registry IDs are preserved
