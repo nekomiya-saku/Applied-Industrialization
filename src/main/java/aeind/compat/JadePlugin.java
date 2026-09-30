@@ -172,7 +172,7 @@ public final class JadePlugin implements IWailaPlugin {
             List<ItemStack> items = new ArrayList<>();
             List<Long> amounts = new ArrayList<>();
             for (GenericStack stack : catalystHost.aeind$catalystStorage().toList()) {
-               if (stack.what() instanceof AEItemKey itemKey && stack.amount() > 0L) {
+               if (stack != null && stack.what() instanceof AEItemKey itemKey && stack.amount() > 0L) {
                   items.add(itemKey.toStack(1));
                   amounts.add(stack.amount());
                }
@@ -262,7 +262,7 @@ public final class JadePlugin implements IWailaPlugin {
             List<CompoundTag> fluids = new ArrayList<>();
             List<Long> amounts = new ArrayList<>();
             for (GenericStack stack : catalystHost.aeind$catalystStorage().toList()) {
-               if (stack.what() instanceof AEFluidKey fluidKey && stack.amount() > 0L) {
+               if (stack != null && stack.what() instanceof AEFluidKey fluidKey && stack.amount() > 0L) {
                   long amount = stack.amount();
                   fluids.add(FluidView.writeDefault(
                      JadeFluidObject.of(fluidKey.getFluid(), amount, fluidKey.toStack(1).getComponentsPatch()), amount));

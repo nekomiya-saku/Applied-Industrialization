@@ -160,7 +160,9 @@ public class AdvancedPatternInputHatchBlockEntity extends MEPatternInputHatchBlo
       }
       if (this.getLevel() != null) {
          for (var stack : this.catalystStorage.toList()) {
-            stack.what().addDrops(stack.amount(), drops, this.getLevel(), this.getBlockPos());
+            if (stack != null) {
+               stack.what().addDrops(stack.amount(), drops, this.getLevel(), this.getBlockPos());
+            }
          }
       }
    }
@@ -199,6 +201,9 @@ public class AdvancedPatternInputHatchBlockEntity extends MEPatternInputHatchBlo
       MEStorage network = this.getMainNode().getNode().getGrid().getStorageService().getInventory();
       boolean changed = false;
       for (var stack : this.catalystStorage.toList()) {
+         if (stack == null) {
+            continue;
+         }
          long inserted = network.insert(stack.what(), stack.amount(), Actionable.MODULATE, new MachineSource(this));
          if (inserted > 0L) {
             this.catalystStorage.extract(stack.what(), inserted, Actionable.MODULATE, new MachineSource(this));

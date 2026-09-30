@@ -708,6 +708,9 @@ public class ExtendedPatternInputHatchBlockEntity
       MEStorage network = this.mainNode.getNode().getGrid().getStorageService().getInventory();
       boolean changed = false;
       for (var stack : this.catalystStorage.toList()) {
+         if (stack == null) {
+            continue;
+         }
          long inserted = network.insert(stack.what(), stack.amount(), Actionable.MODULATE, new MachineSource(this));
          if (inserted > 0L) {
             this.catalystStorage.extract(stack.what(), inserted, Actionable.MODULATE, new MachineSource(this));
@@ -781,7 +784,9 @@ public class ExtendedPatternInputHatchBlockEntity
       }
       if (this.level != null) {
          for (var stack : this.catalystStorage.toList()) {
-            stack.what().addDrops(stack.amount(), var1, this.level, this.getBlockPos());
+            if (stack != null) {
+               stack.what().addDrops(stack.amount(), var1, this.level, this.getBlockPos());
+            }
          }
       }
 
