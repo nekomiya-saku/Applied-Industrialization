@@ -9,6 +9,8 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
+import appeng.menu.SlotSemantics;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 public class HatchPatternProviderScreen extends PatternProviderScreen<HatchPatternProviderMenu> {
@@ -27,6 +29,14 @@ public class HatchPatternProviderScreen extends PatternProviderScreen<HatchPatte
    @Override
    protected void init() {
       super.init();
+      this.setSlotsHidden(SlotSemantics.STORAGE, true);
+      this.setTextContent("interface_stored_items", Component.translatable("gui.aeind.catalysts"));
+      int catalystIndex = 0;
+      for (Slot slot : this.menu.getSlots(ModMenuTypes.CATALYST)) {
+         slot.x = 8 + (catalystIndex % 9) * 18;
+         slot.y = 97 + (catalystIndex / 9) * 18;
+         catalystIndex++;
+      }
       this.returnMaterialButton = Button.builder(
             Component.translatable("button.aeind.return_material.label"), var0 -> PacketDistributor.sendToServer(new ServerboundReturnMaterialPayload())
          )

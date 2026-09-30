@@ -8,6 +8,8 @@ import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.storage.MEStorage;
+import appeng.api.stacks.AEKeyType;
+import appeng.helpers.externalstorage.GenericStackInv;
 import appeng.me.helpers.MachineSource;
 import aztech.modern_industrialization.inventory.ConfigurableFluidStack;
 import aztech.modern_industrialization.inventory.ConfigurableItemStack;
@@ -27,12 +29,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 
-public class AdvancedPatternInputHatchBlockEntity extends MEPatternInputHatchBlockEntity implements IsolatedInputProvider {
+public class AdvancedPatternInputHatchBlockEntity extends MEPatternInputHatchBlockEntity implements IsolatedInputProvider, aeind.isolation.CatalystStorageHost {
    public static final int PATTERN_SLOTS = 9;
    public static final int SLOTS_PER_ROOM = 9;
    private static final int TOTAL_SLOTS = 81;
    private static final int INPUT_STORAGE_VERSION = 1;
    private final RoomInputStorage[] roomStorages;
+   private final GenericStackInv catalystStorage;
 
    public AdvancedPatternInputHatchBlockEntity(BlockPos var1, BlockState var2) {
       super(var1, var2, ModBlockEntities.ADVANCED_PATTERN_INPUT_HATCH.get(), 81, true);
@@ -40,6 +43,14 @@ public class AdvancedPatternInputHatchBlockEntity extends MEPatternInputHatchBlo
       for (int room = 0; room < this.roomStorages.length; room++) {
          this.roomStorages[room] = new RoomInputStorage(this::setChanged);
       }
+      this.catalystStorage = new GenericStackInv(
+         Set.of(AEKeyType.items(), AEKeyType.fluids()), this::setChanged, GenericStackInv.Mode.STORAGE, 18
+      );
+   }
+
+   @Override
+   public GenericStackInv aeind$catalystStorage() {
+      return this.catalystStorage;
    }
 
    @Override
@@ -100,7 +111,7 @@ public class AdvancedPatternInputHatchBlockEntity extends MEPatternInputHatchBlo
       ArrayList<ThreadIsolationRoom> var1 = new ArrayList<>(9);
 
       for (int var2 = 0; var2 < 9; var2++) {
-         var1.add(new ThreadIsolationRoom("pattern:" + this.getBlockPos().asLong() + ":" + var2, this.roomStorages[var2]));
+         var1.add(new ThreadIsolationRoom("pattern:" + this.getBlockPos().asLong() + ":" + var2, this.roomStorages[var2], this.catalystStorage));
       }
 
       return var1;
@@ -114,6 +125,7 @@ public class AdvancedPatternInputHatchBlockEntity extends MEPatternInputHatchBlo
          rooms.add(roomStorage.writeNbt(provider));
       }
       tag.put("aeindInputRooms", rooms);
+      tag.put("aeindCatalysts", this.catalystStorage.writeToTag(provider));
    }
 
    @Override
@@ -135,6 +147,10 @@ public class AdvancedPatternInputHatchBlockEntity extends MEPatternInputHatchBlo
             this.migrateLegacyRoom(room);
          }
       }
+      this.catalystStorage.clear();
+      if (tag.contains("aeindCatalysts")) {
+         this.catalystStorage.readFromTag(tag.getList("aeindCatalysts", 10), provider);
+      }
    }
 
    @Override
@@ -142,11 +158,16 @@ public class AdvancedPatternInputHatchBlockEntity extends MEPatternInputHatchBlo
       for (RoomInputStorage roomStorage : this.roomStorages) {
          roomStorage.addItemDrops(drops);
       }
+      if (this.getLevel() != null) {
+         for (var stack : this.catalystStorage.toList()) {
+            stack.what().addDrops(stack.amount(), drops, this.getLevel(), this.getBlockPos());
+         }
+      }
    }
 
    @Override
    public boolean returnAllBufferToNetwork() {
-      return super.returnAllBufferToNetwork() | this.flushRoomStorages(key -> true);
+      return super.returnAllBufferToNetwork() | this.flushRoomStorages(key -> true) | this.flushCatalystsToNetwork();
    }
 
    @Override
@@ -169,6 +190,20 @@ public class AdvancedPatternInputHatchBlockEntity extends MEPatternInputHatchBlo
       boolean changed = false;
       for (RoomInputStorage roomStorage : this.roomStorages) {
          changed |= roomStorage.flushTo(network, source, filter);
+      }
+      return changed;
+   }
+
+   private boolean flushCatalystsToNetwork() {
+      if (this.getLevel() == null || this.getLevel().isClientSide || this.getMainNode().getNode() == null || !this.getMainNode().getNode().isActive()) return false;
+      MEStorage network = this.getMainNode().getNode().getGrid().getStorageService().getInventory();
+      boolean changed = false;
+      for (var stack : this.catalystStorage.toList()) {
+         long inserted = network.insert(stack.what(), stack.amount(), Actionable.MODULATE, new MachineSource(this));
+         if (inserted > 0L) {
+            this.catalystStorage.extract(stack.what(), inserted, Actionable.MODULATE, new MachineSource(this));
+            changed = true;
+         }
       }
       return changed;
    }

@@ -2,6 +2,8 @@ package aeind.gui;
 
 import appeng.helpers.patternprovider.PatternProviderLogicHost;
 import appeng.menu.implementations.MenuTypeBuilder;
+import appeng.menu.SlotSemantic;
+import appeng.menu.SlotSemantics;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.MenuType;
@@ -11,6 +13,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 public class ModMenuTypes {
+   public static final SlotSemantic CATALYST = SlotSemantics.register("CATALYST", false, 0);
    public static final DeferredRegister<MenuType<?>> MENU_TYPES = DeferredRegister.create(Registries.MENU, "aeind");
    public static final DeferredHolder<MenuType<?>, MenuType<HatchPatternProviderMenu>> ADVANCED_PATTERN_INPUT_HATCH = MENU_TYPES.register(
       "advanced_pattern_input_hatch",

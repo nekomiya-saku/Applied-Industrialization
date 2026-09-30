@@ -4,6 +4,7 @@ import appeng.api.networking.IGridNode;
 import appeng.api.networking.IInWorldGridNodeHost;
 import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
+import appeng.api.stacks.GenericStack;
 import aztech.modern_industrialization.api.machine.holder.MultiblockInventoryComponentHolder;
 import aztech.modern_industrialization.machines.MachineBlock;
 import aztech.modern_industrialization.machines.MachineBlockEntity;
@@ -16,6 +17,7 @@ import aeind.blockentity.MEOutputHatchBlockEntity;
 import aeind.blockentity.MEPatternInputHatchBlockEntity;
 import aeind.cross_thread.CrossThreadControllerAccess;
 import aeind.isolation.IsolatedInputProvider;
+import aeind.isolation.CatalystStorageHost;
 import aeind.isolation.ThreadIsolationRoom;
 import aeind.isolation.ThreadIsolationAccess;
 import java.text.NumberFormat;
@@ -94,6 +96,18 @@ public final class JadePlugin implements IWailaPlugin {
       return null;
    }
 
+   private static CatalystStorageHost getCatalystHost(Accessor<?> accessor) {
+      Object target = accessor.getTarget();
+      if (target instanceof CatalystStorageHost host) {
+         return host;
+      }
+      if (accessor instanceof BlockAccessor blockAccessor
+         && blockAccessor.getBlockEntity() instanceof CatalystStorageHost host) {
+         return host;
+      }
+      return null;
+   }
+
    private static Component roomTitle(String roomId) {
       return Component.translatable("jade.aeind.input_room", roomId == null ? "?" : roomId);
    }
@@ -153,6 +167,25 @@ public final class JadePlugin implements IWailaPlugin {
             group.getExtraData().putLongArray(AMOUNTS, serializedAmounts);
             groups.add(group);
          }
+         CatalystStorageHost catalystHost = getCatalystHost(accessor);
+         if (catalystHost != null) {
+            List<ItemStack> items = new ArrayList<>();
+            List<Long> amounts = new ArrayList<>();
+            for (GenericStack stack : catalystHost.aeind$catalystStorage().toList()) {
+               if (stack.what() instanceof AEItemKey itemKey && stack.amount() > 0L) {
+                  items.add(itemKey.toStack(1));
+                  amounts.add(stack.amount());
+               }
+            }
+            if (!items.isEmpty()) {
+               ViewGroup<ItemStack> group = new ViewGroup<>(items);
+               group.id = "catalysts";
+               long[] serializedAmounts = new long[amounts.size()];
+               for (int i = 0; i < amounts.size(); i++) serializedAmounts[i] = amounts.get(i);
+               group.getExtraData().putLongArray(AMOUNTS, serializedAmounts);
+               groups.add(group);
+            }
+         }
          return groups;
       }
 
@@ -160,7 +193,9 @@ public final class JadePlugin implements IWailaPlugin {
       public List<ClientViewGroup<ItemView>> getClientGroups(
          Accessor<?> accessor, List<ViewGroup<ItemStack>> groups) {
          return ClientViewGroup.map(groups, ItemView::new, (group, clientGroup) -> {
-            clientGroup.title = roomTitle(group.id);
+            clientGroup.title = group.id.equals("catalysts")
+               ? Component.translatable("jade.aeind.catalysts")
+               : roomTitle(group.id);
             long[] amounts = group.getExtraData().getLongArray(AMOUNTS);
             for (int i = 0; i < clientGroup.views.size() && i < amounts.length; i++) {
                clientGroup.views.get(i).amountText(formatAmount(amounts[i]));
@@ -222,6 +257,27 @@ public final class JadePlugin implements IWailaPlugin {
             group.getExtraData().putLongArray(AMOUNTS, serializedAmounts);
             groups.add(group);
          }
+         CatalystStorageHost catalystHost = getCatalystHost(accessor);
+         if (catalystHost != null) {
+            List<CompoundTag> fluids = new ArrayList<>();
+            List<Long> amounts = new ArrayList<>();
+            for (GenericStack stack : catalystHost.aeind$catalystStorage().toList()) {
+               if (stack.what() instanceof AEFluidKey fluidKey && stack.amount() > 0L) {
+                  long amount = stack.amount();
+                  fluids.add(FluidView.writeDefault(
+                     JadeFluidObject.of(fluidKey.getFluid(), amount, fluidKey.toStack(1).getComponentsPatch()), amount));
+                  amounts.add(amount);
+               }
+            }
+            if (!fluids.isEmpty()) {
+               ViewGroup<CompoundTag> group = new ViewGroup<>(fluids);
+               group.id = "catalysts";
+               long[] serializedAmounts = new long[amounts.size()];
+               for (int i = 0; i < amounts.size(); i++) serializedAmounts[i] = amounts.get(i);
+               group.getExtraData().putLongArray(AMOUNTS, serializedAmounts);
+               groups.add(group);
+            }
+         }
          return groups;
       }
 
@@ -229,7 +285,9 @@ public final class JadePlugin implements IWailaPlugin {
       public List<ClientViewGroup<FluidView>> getClientGroups(
          Accessor<?> accessor, List<ViewGroup<CompoundTag>> groups) {
          return ClientViewGroup.map(groups, FluidView::readDefault, (group, clientGroup) -> {
-            clientGroup.title = roomTitle(group.id);
+            clientGroup.title = group.id.equals("catalysts")
+               ? Component.translatable("jade.aeind.catalysts")
+               : roomTitle(group.id);
             long[] amounts = group.getExtraData().getLongArray(AMOUNTS);
             for (int i = 0; i < clientGroup.views.size() && i < amounts.length; i++) {
                clientGroup.views.get(i).overrideText = Component.literal(formatAmount(amounts[i]) + " mB");

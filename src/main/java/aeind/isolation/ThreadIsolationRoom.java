@@ -1,5 +1,6 @@
 package aeind.isolation;
 
+import appeng.api.storage.MEStorage;
 import aztech.modern_industrialization.inventory.ConfigurableFluidStack;
 import aztech.modern_industrialization.inventory.ConfigurableItemStack;
 import java.util.List;
@@ -9,7 +10,8 @@ public final class ThreadIsolationRoom {
     private final String id;
     private final List<ConfigurableItemStack> itemInputs;
     private final List<ConfigurableFluidStack> fluidInputs;
-    private final RoomInputStorage inputStorage;
+   private final RoomInputStorage inputStorage;
+   private final MEStorage catalystStorage;
 
     public ThreadIsolationRoom(
             String id,
@@ -19,13 +21,19 @@ public final class ThreadIsolationRoom {
         this.itemInputs = itemInputs;
         this.fluidInputs = fluidInputs;
         this.inputStorage = null;
-    }
+        this.catalystStorage = null;
+   }
 
-    public ThreadIsolationRoom(String id, RoomInputStorage inputStorage) {
-        this.id = id;
-        this.itemInputs = List.of();
-        this.fluidInputs = List.of();
-        this.inputStorage = inputStorage;
+   public ThreadIsolationRoom(String id, RoomInputStorage inputStorage) {
+      this(id, inputStorage, null);
+   }
+
+   public ThreadIsolationRoom(String id, RoomInputStorage inputStorage, MEStorage catalystStorage) {
+      this.id = id;
+      this.itemInputs = List.of();
+      this.fluidInputs = List.of();
+      this.inputStorage = inputStorage;
+      this.catalystStorage = catalystStorage;
     }
 
     public String id() {
@@ -44,7 +52,15 @@ public final class ThreadIsolationRoom {
         return this.inputStorage;
     }
 
-    public boolean hasMapStorage() {
-        return this.inputStorage != null;
-    }
+   public boolean hasMapStorage() {
+      return this.inputStorage != null;
+   }
+
+   public MEStorage catalystStorage() {
+      return this.catalystStorage;
+   }
+
+   public boolean hasCatalystStorage() {
+      return this.catalystStorage != null;
+   }
 }

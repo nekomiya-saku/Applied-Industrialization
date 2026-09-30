@@ -57,8 +57,7 @@ public class AdvancedPatternInputHatchBlock extends BaseEntityBlock {
    @Override
    public void appendHoverText(ItemStack var1, Item.TooltipContext var2, List<Component> var3, TooltipFlag var4) {
       var3.add(Component.translatable("tooltip.aeind.pattern_input_hatch.isolation").withStyle(ChatFormatting.AQUA));
-      var3.add(Component.translatable("tooltip.aeind.pattern_input_hatch.no_catalyst").withStyle(ChatFormatting.YELLOW));
-      var3.add(Component.translatable("tooltip.aeind.pattern_input_hatch.catalyst_warning").withStyle(ChatFormatting.YELLOW));
+      var3.add(Component.translatable("tooltip.aeind.pattern_input_hatch.catalyst").withStyle(ChatFormatting.GREEN));
    }
 
    @Override

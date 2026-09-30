@@ -4,6 +4,7 @@ import appeng.api.config.Actionable;
 import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
+import appeng.api.stacks.KeyCounter;
 import aztech.modern_industrialization.inventory.AbstractConfigurableStack;
 import aztech.modern_industrialization.inventory.ConfigurableFluidStack;
 import aztech.modern_industrialization.inventory.ConfigurableItemStack;
@@ -359,7 +360,9 @@ public final class CrossThreadRecipeManager {
 
       ArrayList<ConfigurableItemStack> var4 = ConfigurableItemStack.copyList(sourceItems);
       ArrayList<ConfigurableFluidStack> var5 = ConfigurableFluidStack.copyList(sourceFluids);
-      return takeItemInputs(var0, var4, var2, var3, true, false) && takeFluidInputs(var0, var5, var2, var3, true, false);
+      return takeItemInputs(var0, var4, var2, var3, true, false)
+         && takeFluidInputs(var0, var5, var2, var3, true, false)
+         && canTakeCatalysts(var1, var2);
    }
 
    private static boolean takeInputs(Behavior var0, ThreadIsolationRoom var1, MachineRecipe var2, int var3) {
@@ -388,10 +391,56 @@ public final class CrossThreadRecipeManager {
          && takeFluidInputs(var0, var1.fluidInputs(), var2, var3, false, true);
    }
 
+   private static boolean canTakeCatalysts(ThreadIsolationRoom room, MachineRecipe recipe) {
+      if (!room.hasCatalystStorage()) {
+         for (ItemInput input : recipe.itemInputs) {
+            if (input.probability() == 0.0F) return false;
+         }
+         for (FluidInput input : recipe.fluidInputs) {
+            if (input.probability() == 0.0F) return false;
+         }
+         return true;
+      }
+
+      KeyCounter available = room.catalystStorage().getAvailableStacks();
+      java.util.Map<AEKey, Long> remaining = new java.util.HashMap<>();
+      for (it.unimi.dsi.fastutil.objects.Object2LongMap.Entry<AEKey> entry : available) {
+         remaining.put(entry.getKey(), entry.getLongValue());
+      }
+      for (ItemInput input : recipe.itemInputs) {
+         if (input.probability() != 0.0F) continue;
+         long required = input.amount();
+         for (it.unimi.dsi.fastutil.objects.Object2LongMap.Entry<AEKey> entry : available) {
+            if (entry.getKey() instanceof AEItemKey item && input.ingredient().test(item.toStack())) {
+               long amount = Math.min(required, remaining.getOrDefault(entry.getKey(), 0L));
+               required -= amount;
+               remaining.put(entry.getKey(), remaining.getOrDefault(entry.getKey(), 0L) - amount);
+               if (required == 0L) break;
+            }
+         }
+         if (required > 0L) return false;
+      }
+      for (FluidInput input : recipe.fluidInputs) {
+         if (input.probability() != 0.0F) continue;
+         long required = input.amount();
+         for (it.unimi.dsi.fastutil.objects.Object2LongMap.Entry<AEKey> entry : available) {
+            if (entry.getKey() instanceof AEFluidKey fluid && input.fluid().test(fluid.toStack(1))) {
+               long amount = Math.min(required, remaining.getOrDefault(entry.getKey(), 0L));
+               required -= amount;
+               remaining.put(entry.getKey(), remaining.getOrDefault(entry.getKey(), 0L) - amount);
+               if (required == 0L) break;
+            }
+         }
+         if (required > 0L) return false;
+      }
+      return true;
+   }
+
    private static boolean takeItemInputs(
       Behavior var0, List<ConfigurableItemStack> var1, MachineRecipe var2, int var3, boolean var4, boolean var5
    ) {
       for (ItemInput var7 : var2.itemInputs) {
+         if (var7.probability() == 0.0F) continue;
          long var8 = var4 ? var3 : sampleOccurrences(var3, var7.probability());
          long var10 = saturatedMultiply(var7.amount(), var8);
 
@@ -427,6 +476,7 @@ public final class CrossThreadRecipeManager {
       boolean[] var6 = var0 != null && var0.oneFluidInputPerStack() ? new boolean[var1.size()] : null;
 
       for (FluidInput var8 : var2.fluidInputs) {
+         if (var8.probability() == 0.0F) continue;
          long var9 = var4 ? var3 : sampleOccurrences(var3, var8.probability());
          long var11 = saturatedMultiply(var8.amount(), var9);
 
