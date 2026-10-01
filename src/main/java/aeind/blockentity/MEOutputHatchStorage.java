@@ -31,18 +31,25 @@ public class MEOutputHatchStorage implements MEStorage {
          return 0L;
       }
 
+      long buffered = this.host.getOutputBuffer().extract(var1, var2, var4);
+      if (buffered >= var2) {
+         return buffered;
+      }
+
+      long remaining = var2 - buffered;
+
       if (!(var1 instanceof AEItemKey var6)) {
          if (var1 instanceof AEFluidKey var15) {
-            long var16 = Math.min(var2, 2147483647L);
+            long var16 = Math.min(remaining, 2147483647L);
             FluidStack var17 = this.host
                .getFluidHandler()
                .drain(var15.toStack((int)var16), var4 == Actionable.MODULATE ? IFluidHandler.FluidAction.EXECUTE : IFluidHandler.FluidAction.SIMULATE);
-            return var17.getAmount();
+            return buffered + var17.getAmount();
          } else {
-            return 0L;
+            return buffered;
          }
       } else {
-         long var7 = 0L;
+         long var7 = buffered;
          boolean var9 = var4 != Actionable.MODULATE;
          IItemHandler var10 = this.host.getBufferInventory();
 
@@ -61,6 +68,7 @@ public class MEOutputHatchStorage implements MEStorage {
 
    @Override
    public void getAvailableStacks(KeyCounter var1) {
+      this.host.getOutputBuffer().getAvailableStacks(var1);
       IItemHandler var2 = this.host.getBufferInventory();
 
       for (int var3 = 0; var3 < var2.getSlots(); var3++) {

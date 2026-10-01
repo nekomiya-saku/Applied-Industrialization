@@ -77,6 +77,7 @@ import aztech.modern_industrialization.machines.multiblocks.HatchBlockEntity;
 import aztech.modern_industrialization.machines.multiblocks.HatchType;
 import aztech.modern_industrialization.machines.multiblocks.HatchTypes;
 import aztech.modern_industrialization.thirdparty.fabrictransfer.api.item.ItemVariant;
+import aztech.modern_industrialization.thirdparty.fabrictransfer.api.fluid.FluidVariant;
 import aeind.block.ModBlocks;
 import aeind.blockentity.ModBlockEntities;
 import java.util.ArrayList;
@@ -101,11 +102,13 @@ import org.jetbrains.annotations.Nullable;
 public class MEOutputHatchBlockEntity
 extends HatchBlockEntity
 implements IInWorldGridNodeHost,
-IActionHost {
+IActionHost,
+VirtualOutputSink {
     public static final int BUFFER_ITEM_SLOTS = 36;
     public static final int BUFFER_FLUID_TANKS = 36;
     public static final long FLUID_CAPACITY = Long.MAX_VALUE;
     public static final int TICK_RATE = 1;
+    private static final int MAX_NETWORK_OUTPUT_TYPES_PER_TICK = 64;
     private final IManagedGridNode mainNode = GridHelper.createManagedNode(this, NODE_LISTENER).setVisualRepresentation(new ItemStack(ModBlocks.ME_OUTPUT_HATCH.get())).setInWorldNode(true).setTagName("me_output_hatch_node").setFlags(GridFlags.REQUIRE_CHANNEL).setExposedOnSides(EnumSet.allOf(Direction.class));
     private final MIInventory bufferInventory;
     private final AEKeyLongStorage outputBuffer = new AEKeyLongStorage(this::setChanged);
@@ -134,16 +137,17 @@ IActionHost {
         super(new BEP((BlockEntityType)ModBlockEntities.ME_OUTPUT_HATCH.get(), blockPos, blockState), new MachineGuiParameters.Builder(ResourceLocation.fromNamespaceAndPath((String)"aeind", (String)"me_output_hatch"), true).backgroundHeight(200).build(), OrientationComponent.Params.noFacing((boolean)true, (boolean)false));
         ArrayList<ConfigurableItemStack> arrayList = new ArrayList<ConfigurableItemStack>(36);
         for (int i = 0; i < 36; ++i) {
-            arrayList.add(new LongOutputItemStack());
+            arrayList.add(new VirtualOutputItemStack());
         }
         ArrayList<ConfigurableFluidStack> arrayList2 = new ArrayList<ConfigurableFluidStack>(36);
         for (int i = 0; i < 36; ++i) {
-            arrayList2.add(ConfigurableFluidStack.standardOutputSlot(Long.MAX_VALUE));
+            arrayList2.add(new VirtualOutputFluidStack());
         }
         SlotPositions slotPositions = new SlotPositions.Builder().addSlots(8, 18, 9, 4).build();
         SlotPositions slotPositions2 = new SlotPositions.Builder().addSlots(8, 18, 9, 4).build();
         this.bufferInventory = new MIInventory(arrayList, arrayList2, slotPositions, slotPositions2);
         this.registerComponents(new MachineComponent[]{this.bufferInventory, this.persistentData});
+        this.bindVirtualOutputSlots();
     }
 
     public void setRemoved() {
@@ -224,10 +228,12 @@ IActionHost {
     }
 
     public void appendItemOutputs(List<ConfigurableItemStack> list) {
+        this.bindVirtualOutputSlots();
         list.addAll(0, this.bufferInventory.getItemStacks());
     }
 
     public void appendFluidOutputs(List<ConfigurableFluidStack> list) {
+        this.bindVirtualOutputSlots();
         list.addAll(0, this.bufferInventory.getFluidStacks());
     }
 
@@ -248,6 +254,7 @@ IActionHost {
             return;
         }
         this.ensureLongOutputSlots();
+        this.bindVirtualOutputSlots();
         this.collectMachineOutputs();
         IGridNode iGridNode = this.mainNode.getNode();
         if (iGridNode == null || !iGridNode.isActive()) {
@@ -255,7 +262,8 @@ IActionHost {
         }
         MachineSource machineSource = new MachineSource((IActionHost)this);
         MEStorage mEStorage = this.mainNode.getGrid().getStorageService().getInventory();
-        this.outputBuffer.flushTo(mEStorage, (IActionSource)machineSource);
+        this.outputBuffer.flushTo(mEStorage, (IActionSource)machineSource, key -> true,
+                MAX_NETWORK_OUTPUT_TYPES_PER_TICK);
     }
 
     void collectMachineOutputs() {
@@ -292,13 +300,54 @@ IActionHost {
         List<ConfigurableItemStack> itemStacks = this.bufferInventory.getItemStacks();
         for (int i = 0; i < itemStacks.size(); ++i) {
             ConfigurableItemStack stack = itemStacks.get(i);
-            if (!(stack instanceof LongOutputItemStack)) {
-                itemStacks.set(i, new LongOutputItemStack(stack));
+            if (!(stack instanceof VirtualOutputItemStack)) {
+                if (!stack.isEmpty() && stack.getAmount() > 0L) {
+                    ItemVariant key = (ItemVariant) stack.getResource();
+                    this.acceptItemOutput(key, stack.getAmount());
+                }
+                itemStacks.set(i, new VirtualOutputItemStack());
+            }
+        }
+        List<ConfigurableFluidStack> fluidStacks = this.bufferInventory.getFluidStacks();
+        for (int i = 0; i < fluidStacks.size(); ++i) {
+            ConfigurableFluidStack stack = fluidStacks.get(i);
+            if (!(stack instanceof VirtualOutputFluidStack)) {
+                if (!stack.isEmpty() && stack.getAmount() > 0L) {
+                    this.acceptFluidOutput((FluidVariant) stack.getResource(), stack.getAmount());
+                }
+                fluidStacks.set(i, new VirtualOutputFluidStack());
+            }
+        }
+        this.bindVirtualOutputSlots();
+    }
+
+    private void bindVirtualOutputSlots() {
+        for (ConfigurableItemStack stack : this.bufferInventory.getItemStacks()) {
+            if (stack instanceof VirtualOutputItemStack virtual) {
+                virtual.bind(this);
             }
         }
         for (ConfigurableFluidStack stack : this.bufferInventory.getFluidStacks()) {
-            stack.setCapacity(Long.MAX_VALUE);
+            if (stack instanceof VirtualOutputFluidStack virtual) {
+                virtual.bind(this);
+            }
         }
+    }
+
+    @Override
+    public void acceptItemOutput(ItemVariant key, long amount) {
+        if (key == null || key.isBlank() || amount <= 0L) {
+            return;
+        }
+        this.outputBuffer.insert(AEItemKey.of(key.toStack(1)), amount, Actionable.MODULATE);
+    }
+
+    @Override
+    public void acceptFluidOutput(FluidVariant key, long amount) {
+        if (key == null || key.isBlank() || amount <= 0L) {
+            return;
+        }
+        this.outputBuffer.insert(AEFluidKey.of(key.toStack(1)), amount, Actionable.MODULATE);
     }
 
     public void addOutputDrops(List<ItemStack> list) {

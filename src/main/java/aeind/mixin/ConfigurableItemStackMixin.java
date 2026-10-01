@@ -2,6 +2,7 @@ package aeind.mixin;
 
 import aztech.modern_industrialization.inventory.ConfigurableItemStack;
 import aeind.blockentity.LongOutputItemStack;
+import aeind.blockentity.VirtualOutputItemStack;
 import java.util.ArrayList;
 import java.util.List;
 import org.spongepowered.asm.mixin.Mixin;
@@ -19,6 +20,8 @@ public abstract class ConfigurableItemStackMixin {
         for (int i = 0; i < Math.min(source.size(), copy.size()); ++i) {
             if (source.get(i) instanceof LongOutputItemStack) {
                 copy.set(i, new LongOutputItemStack(copy.get(i)));
+            } else if (source.get(i) instanceof VirtualOutputItemStack virtual) {
+                copy.set(i, virtual.detached());
             }
         }
     }

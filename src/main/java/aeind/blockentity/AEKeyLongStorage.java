@@ -127,27 +127,37 @@ public final class AEKeyLongStorage {
     }
 
     public boolean flushTo(MEStorage target, IActionSource source) {
-        return this.flushTo(target, source, key -> true);
+        return this.flushTo(target, source, key -> true, Integer.MAX_VALUE);
     }
 
     public boolean flushTo(MEStorage target, IActionSource source, Predicate<AEKey> filter) {
+        return this.flushTo(target, source, filter, Integer.MAX_VALUE);
+    }
+
+    public boolean flushTo(MEStorage target, IActionSource source, Predicate<AEKey> filter, int maxEntries) {
+        int attempts = Math.min(maxEntries, this.contents.size());
+        if (attempts <= 0) {
+            return false;
+        }
         boolean changed = false;
-        Iterator<Map.Entry<AEKey, Long>> iterator = this.contents.entrySet().iterator();
-        while (iterator.hasNext()) {
+        for (int processed = 0; processed < attempts; ++processed) {
+            Iterator<Map.Entry<AEKey, Long>> iterator = this.contents.entrySet().iterator();
             Map.Entry<AEKey, Long> entry = iterator.next();
+            AEKey key = entry.getKey();
+            long stored = entry.getValue();
+            iterator.remove();
             if (!filter.test(entry.getKey())) {
+                this.contents.put(key, stored);
                 continue;
             }
-            long stored = entry.getValue();
-            long inserted = target.insert(entry.getKey(), stored, Actionable.MODULATE, source);
+            long inserted = target.insert(key, stored, Actionable.MODULATE, source);
             if (inserted <= 0L) {
+                this.contents.put(key, stored);
                 continue;
             }
             changed = true;
-            if (inserted >= stored) {
-                iterator.remove();
-            } else {
-                entry.setValue(stored - inserted);
+            if (inserted < stored) {
+                this.contents.put(key, stored - inserted);
             }
         }
         if (changed) {
