@@ -212,7 +212,10 @@ public final class CrossThreadRecipeManager {
       }
 
       var29 |= this.flushCompletedOutputs(var2.getInventory());
-      if (!var4 && !this.hasWork()) {
+      // Isolated rooms keep their efficiency history between recipes, just like
+      // MI's native CrafterComponent. Without this, upgrade-derived max EU/t is
+      // never reached because every completed recipe resets the thread state.
+      if (!var4 && var6.isEmpty() && !this.hasWork()) {
          this.states.clear();
       } else {
          this.states.entrySet().removeIf(var1x -> !var6.containsKey(var1x.getKey()) && !var1x.getValue().hasWork());
