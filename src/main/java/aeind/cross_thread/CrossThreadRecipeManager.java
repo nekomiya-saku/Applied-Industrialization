@@ -10,6 +10,8 @@ import aztech.modern_industrialization.inventory.ConfigurableFluidStack;
 import aztech.modern_industrialization.inventory.ConfigurableItemStack;
 import aztech.modern_industrialization.machines.MachineBlockEntity;
 import aztech.modern_industrialization.machines.components.CrafterComponent;
+import aztech.modern_industrialization.api.machine.component.CrafterAccess;
+import aztech.modern_industrialization.api.machine.holder.CrafterComponentHolder;
 import aztech.modern_industrialization.machines.components.CrafterComponent.Behavior;
 import aztech.modern_industrialization.machines.components.CrafterComponent.Inventory;
 import aztech.modern_industrialization.machines.recipe.MachineRecipe;
@@ -128,104 +130,114 @@ public final class CrossThreadRecipeManager {
       return active;
    }
 
-   public boolean tick(MachineBlockEntity var1, CrafterComponent var2, ThreadIsolationAccess var3, boolean var4) {
-      Behavior var5 = var2.getBehavior();
-      LinkedHashMap<String, ThreadIsolationRoom> var6 = new LinkedHashMap<>();
+   public boolean tick(MachineBlockEntity machine, CrafterComponent crafter, ThreadIsolationAccess access, boolean crossThread) {
+      Behavior behavior = crafter.getBehavior();
+      LinkedHashMap<String, ThreadIsolationRoom> rooms = new LinkedHashMap<>();
+      for (ThreadIsolationRoom room : access.aeind$isolationRooms()) rooms.putIfAbsent(room.id(), room);
 
-      for (ThreadIsolationRoom var8 : var3.aeind$isolationRooms()) {
-         var6.putIfAbsent(var8.id(), var8);
+      boolean changed = this.flushCompletedOutputs(crafter.getInventory());
+      this.lastEuPerTick = 0L;
+      List<ThreadIsolationRoom> roomList = new ArrayList<>(rooms.values());
+      List<RecipeThreadState> roomStates = new ArrayList<>();
+      for (ThreadIsolationRoom room : roomList) {
+         RecipeThreadState state = this.states.computeIfAbsent(room.id(), RecipeThreadState::new);
+         roomStates.add(state);
+         RecipeHolder<MachineRecipe> recipe = getRecipe(behavior, state.recipeId);
+         state.efficiencyTicks = CrossThreadEfficiencyBridge.tickStart(
+            machine, crafter, recipe, state.maxEfficiencyTicks, state.efficiencyTicks, state.currentRecipeMaxEu
+         );
       }
 
-      boolean var29 = this.flushCompletedOutputs(var2.getInventory());
-      this.lastEuPerTick = 0L;
-      if (var5.isEnabled()) {
-         int var31 = var4 ? MIParallelHatchCompat.getParallelLimit(var1) : 1;
-         int var9 = var4 ? Math.max(Math.max(1, var3.aeind$maxParallelPerThread()), var31) : 1;
-
-         for (ThreadIsolationRoom var11 : var6.values()) {
-            if (!var4 && this.hasWork()) {
-               break;
-            }
-            CrossThreadRecipeManager.RecipeThreadState var12 = this.states.computeIfAbsent(var11.id(), CrossThreadRecipeManager.RecipeThreadState::new);
-            if (!var12.hasWork()) {
-               boolean var13 = this.tryStart(var1, var2, var11, var12, var9, var4 && var31 > 1);
-               var29 |= var13;
-               if (!var13 && var12.efficiencyTicks > 0) {
-                  var12.efficiencyTicks--;
-                  if (var12.efficiencyTicks == 0) {
-                     var12.recipeId = null;
-                  }
-
-                  var29 = true;
+      if (behavior.isEnabled()) {
+         int parallelLimit = crossThread ? MIParallelHatchCompat.getParallelLimit(machine) : 1;
+         int limit = crossThread ? Math.max(Math.max(1, access.aeind$maxParallelPerThread()), parallelLimit) : 1;
+         for (int index = 0; index < roomList.size(); index++) {
+            ThreadIsolationRoom room = roomList.get(index);
+            if (!crossThread && this.hasWork()) break;
+            RecipeThreadState state = roomStates.get(index);
+            if (!state.hasWork()) {
+               boolean started = this.tryStart(machine, crafter, room, state, limit, crossThread && parallelLimit > 1);
+               changed |= started;
+               if (!started && state.efficiencyTicks > 0) {
+                  RecipeHolder<MachineRecipe> recipe = getRecipe(behavior, state.recipeId);
+                  int previous = state.efficiencyTicks;
+                  state.efficiencyTicks = CrossThreadEfficiencyBridge.decrease(
+                     machine, crafter, recipe, state.maxEfficiencyTicks, state.efficiencyTicks, state.currentRecipeMaxEu
+                  );
+                  if (state.efficiencyTicks == 0) state.recipeId = null;
+                  changed |= previous != state.efficiencyTicks;
                }
             }
          }
       }
 
-      List<CrossThreadRecipeManager.RecipeThreadState> var32 = this.states.values().stream().filter(CrossThreadRecipeManager.RecipeThreadState::isRunning).toList();
-      boolean var33 = false;
-      if (!var32.isEmpty() && var5.isEnabled()) {
-         long[] var34 = new long[var32.size()];
-         long var35 = 0L;
-
-         for (int var36 = 0; var36 < var32.size(); var36++) {
-            CrossThreadRecipeManager.RecipeThreadState var14 = var32.get(var36);
-            RecipeHolder<MachineRecipe> var15 = getRecipe(var5, var14.recipeId);
-            if (var15 != null && var15.value().conditionsMatch(conditionContext(var1))) {
-               long var16 = getRecipeMaxEu(var5, var15.value(), var14.efficiencyTicks);
-               long var18 = var14.usedEnergy >= var14.totalEnergy ? 0L : var14.totalEnergy - var14.usedEnergy;
-               var34[var36] = Math.min(MIParallelHatchCompat.scaleEnergy(var16, var14.parallel, var14.energyFactor), var18);
-               var35 = saturatedAdd(var35, var34[var36]);
+      List<RecipeThreadState> running = this.states.values().stream().filter(RecipeThreadState::isRunning).toList();
+      boolean active = false;
+      if (!running.isEmpty() && behavior.isEnabled()) {
+         long[] targets = new long[running.size()];
+         long availableTarget = 0L;
+         for (int index = 0; index < running.size(); index++) {
+            RecipeThreadState state = running.get(index);
+            RecipeHolder<MachineRecipe> holder = getRecipe(behavior, state.recipeId);
+            if (holder != null && holder.value().conditionsMatch(conditionContext(machine))) {
+               long raw = getRecipeMaxEu(machine, crafter, state, holder);
+               long scaled = MIParallelHatchCompat.scaleEnergy(raw, state.parallel, state.energyFactor);
+               state.currentRecipeMaxEu = scaled;
+               long remaining = state.usedEnergy >= state.totalEnergy ? 0L : state.totalEnergy - state.usedEnergy;
+               targets[index] = Math.min(scaled, remaining);
+               availableTarget = saturatedAdd(availableTarget, targets[index]);
             }
          }
 
-         long var37 = var5.consumeEu(var35, Simulation.SIMULATE);
-         int var38 = var32.size();
-         int var39 = Math.floorMod(this.fairnessCursor++, var38);
-         int var17 = var38;
-
-         for (int var40 = 0; var40 < var38; var40++) {
-            int var19 = (var39 + var40) % var38;
-            CrossThreadRecipeManager.RecipeThreadState var20 = var32.get(var19);
-            long var21 = var34[var19];
-            long var23 = var17 == 0 ? 0L : divideCeil(var37, var17);
-            long var25 = Math.min(var21, var23);
-            long var27 = var25 == 0L ? 0L : var5.consumeEu(var25, Simulation.ACT);
-            var37 -= var27;
-            var17--;
-            var20.usedEnergy = saturatedAdd(var20.usedEnergy, var27);
-            this.lastEuPerTick = saturatedAdd(this.lastEuPerTick, var27);
-            var33 |= var27 > 0L;
-            if (var27 < var21 && var20.efficiencyTicks > 0) {
-               var20.efficiencyTicks--;
+         long available = behavior.consumeEu(availableTarget, Simulation.SIMULATE);
+         long[] consumed = new long[running.size()];
+         int count = running.size();
+         int cursor = Math.floorMod(this.fairnessCursor++, count);
+         int remainingThreads = count;
+         for (int offset = 0; offset < count; offset++) {
+            int index = (cursor + offset) % count;
+            RecipeThreadState state = running.get(index);
+            long target = targets[index];
+            long share = remainingThreads == 0 ? 0L : divideCeil(available, remainingThreads);
+            long amount = Math.min(target, share);
+            long eu = amount == 0L ? 0L : behavior.consumeEu(amount, Simulation.ACT);
+            available -= eu;
+            remainingThreads--;
+            consumed[index] = eu;
+            state.usedEnergy = saturatedAdd(state.usedEnergy, eu);
+            this.lastEuPerTick = saturatedAdd(this.lastEuPerTick, eu);
+            active |= eu > 0L;
+            if (eu < target && state.efficiencyTicks > 0) {
+               RecipeHolder<MachineRecipe> recipe = getRecipe(behavior, state.recipeId);
+               state.efficiencyTicks = CrossThreadEfficiencyBridge.decrease(
+                  machine, crafter, recipe, state.maxEfficiencyTicks, state.efficiencyTicks, state.currentRecipeMaxEu
+               );
             }
-
-            if (var27 > 0L) {
-               var29 = true;
+            if (eu > 0L) changed = true;
+            if (state.usedEnergy >= state.totalEnergy) {
+               this.finishRecipe(machine, crafter, state);
+               changed = true;
             }
+         }
 
-            if (var20.usedEnergy >= var20.totalEnergy) {
-               this.finishRecipe(var1, var2, var20);
-               var29 = true;
-            }
+         for (int index = 0; index < running.size(); index++) {
+            RecipeThreadState state = running.get(index);
+            RecipeHolder<MachineRecipe> recipe = getRecipe(behavior, state.recipeId);
+            state.efficiencyTicks = CrossThreadEfficiencyBridge.tickEnd(
+               machine, crafter, recipe, state.maxEfficiencyTicks, state.efficiencyTicks,
+               state.currentRecipeMaxEu, consumed[index]
+            );
          }
       }
 
-      var29 |= this.flushCompletedOutputs(var2.getInventory());
-      // Isolated rooms keep their efficiency history between recipes, just like
-      // MI's native CrafterComponent. Without this, upgrade-derived max EU/t is
-      // never reached because every completed recipe resets the thread state.
-      if (!var4 && var6.isEmpty() && !this.hasWork()) {
+      changed |= this.flushCompletedOutputs(crafter.getInventory());
+      if (!crossThread && rooms.isEmpty() && !this.hasWork()) {
          this.states.clear();
       } else {
-         this.states.entrySet().removeIf(var1x -> !var6.containsKey(var1x.getKey()) && !var1x.getValue().hasWork());
+         this.states.entrySet().removeIf(entry -> !rooms.containsKey(entry.getKey()) && !entry.getValue().hasWork());
       }
-
-      if (var29) {
-         var1.setChanged();
-      }
-
-      return var33;
+      if (changed) machine.setChanged();
+      return active;
    }
 
    private boolean tryStart(
@@ -307,7 +319,8 @@ public final class CrossThreadRecipeManager {
       var4.energyFactor = var7 ? MIParallelHatchCompat.getEnergyFactor(var1, var6) : var6;
       var4.usedEnergy = 0L;
       var4.totalEnergy = MIParallelHatchCompat.scaleEnergy(var8.getTotalEu(), var6, var4.energyFactor);
-      var4.maxEfficiencyTicks = getRecipeMaxEfficiencyTicks(var2.getBehavior(), var8);
+      var4.maxEfficiencyTicks = getRecipeMaxEfficiencyTicks(var1, var2, var4, var5);
+      var4.currentRecipeMaxEu = 0L;
       var4.running = true;
       var4.outputsReady = false;
       var4.heldItemOutputs = maximumItemOutputs(var8, var6);
@@ -767,18 +780,36 @@ public final class CrossThreadRecipeManager {
       return () -> var0;
    }
 
-   private static long getRecipeMaxEu(Behavior var0, MachineRecipe var1, int var2) {
-      long var3 = var1.getTotalEu();
-      long var5 = Math.max(var0.getBaseRecipeEu(), var1.eu);
-      long var7 = var5 + var2 * var3 / 600L;
-      return Math.min(var3, Math.min(var7, var0.getMaxRecipeEu()));
+   private static long getRecipeMaxEu(MachineBlockEntity machine, CrafterComponent crafter,
+                                      RecipeThreadState state, RecipeHolder<MachineRecipe> holder) {
+      return getRecipeMaxEu(machine, crafter, state, holder, state.efficiencyTicks);
    }
 
-   private static int getRecipeMaxEfficiencyTicks(Behavior var0, MachineRecipe var1) {
-      long var2 = Math.min(var0.getMaxRecipeEu(), var1.getTotalEu());
+   private static long getRecipeMaxEu(MachineBlockEntity machine, CrafterComponent crafter,
+                                      RecipeThreadState state, RecipeHolder<MachineRecipe> holder,
+                                      int efficiencyTicks) {
+      Behavior behavior = crafter.getBehavior();
+      MachineRecipe recipe = holder.value();
+      long total = recipe.getTotalEu();
+      long base = Math.max(behavior.getBaseRecipeEu(), recipe.eu);
+      long maximum = CrossThreadEfficiencyBridge.maxRecipeEu(
+         machine, crafter, holder, state.maxEfficiencyTicks, efficiencyTicks, behavior.getMaxRecipeEu()
+      );
+      long overclocked = base + (long)efficiencyTicks * total / 600L;
+      return Math.min(total, Math.min(overclocked, maximum));
+   }
+
+   private static int getRecipeMaxEfficiencyTicks(MachineBlockEntity machine, CrafterComponent crafter,
+                                                  RecipeThreadState state, RecipeHolder<MachineRecipe> holder) {
+      Behavior behavior = crafter.getBehavior();
+      MachineRecipe recipe = holder.value();
+      long maximum = Math.min(
+         CrossThreadEfficiencyBridge.maxRecipeEu(machine, crafter, holder, state.maxEfficiencyTicks, 0, behavior.getMaxRecipeEu()),
+         recipe.getTotalEu()
+      );
 
       for (int var4 = 0; var4 < Integer.MAX_VALUE; var4++) {
-         if (getRecipeMaxEu(var0, var1, var4) == var2) {
+         if (getRecipeMaxEu(machine, crafter, state, holder, var4) == maximum) {
             return var4;
          }
       }
@@ -839,7 +870,7 @@ public final class CrossThreadRecipeManager {
       }
    }
 
-   public void readNbt(CompoundTag var1, HolderLookup.Provider var2) {
+   public void readNbt(CompoundTag var1, HolderLookup.Provider var2, MachineBlockEntity machine) {
       this.states.clear();
       this.lastEuPerTick = 0L;
       if (var1.contains("aeindCrossThreadRecipes", 10)) {
@@ -870,7 +901,23 @@ public final class CrossThreadRecipeManager {
       }
       if (var1.contains("aeindTesseractCrossThreadRecipes", 10)) {
          this.tesseractManager = new TesseractCrossThreadRecipeManager();
-         this.tesseractManager.readNbt(var1.getCompound("aeindTesseractCrossThreadRecipes"), var2);
+         if (machine instanceof CrafterComponentHolder holder && holder.getCrafterComponent() instanceof net.swedz.tesseract.neoforge.compat.mi.component.craft.multiplied.MultipliedCrafterComponent multiplied) {
+            this.tesseractManager.readNbt(var1.getCompound("aeindTesseractCrossThreadRecipes"), var2, machine, multiplied);
+         } else {
+            this.tesseractManager.readNbt(var1.getCompound("aeindTesseractCrossThreadRecipes"), var2);
+         }
+      }
+
+      if (machine instanceof CrafterComponentHolder holder) {
+         CrafterAccess crafter = holder.getCrafterComponent();
+         if (crafter instanceof CrafterComponent normal) {
+            for (RecipeThreadState state : this.states.values()) {
+               RecipeHolder<MachineRecipe> recipe = getRecipe(normal.getBehavior(), state.recipeId);
+               state.efficiencyTicks = CrossThreadEfficiencyBridge.readNbt(
+                  machine, normal, recipe, state.maxEfficiencyTicks, state.efficiencyTicks, state.currentRecipeMaxEu
+               );
+            }
+         }
       }
    }
 
@@ -924,6 +971,7 @@ public final class CrossThreadRecipeManager {
       private double energyFactor = 1.0;
       private long usedEnergy;
       private long totalEnergy;
+      private long currentRecipeMaxEu;
       private int efficiencyTicks;
       private int maxEfficiencyTicks;
       private boolean running;

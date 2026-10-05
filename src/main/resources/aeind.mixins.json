@@ -13,6 +13,7 @@
         "MIParallelCrafterStatusMixin",
         "CrafterComponentAccessor",
         "MultipliedCrafterComponentAccessor",
+        "AbstractModularCrafterComponentAccessor",
         "AbstractCraftingMultiblockBlockEntityMixin",
         "TesseractMultipliedCraftingMultiblockBlockEntityMixin",
         "TesseractProgressGuiMixin",

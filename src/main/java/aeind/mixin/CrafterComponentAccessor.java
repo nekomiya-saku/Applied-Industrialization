@@ -28,6 +28,9 @@ public interface CrafterComponentAccessor {
    void aeind$setMaxEfficiencyTicks(int var1);
 
    @Accessor("activeRecipe")
+   RecipeHolder<MachineRecipe> aeind$getActiveRecipe();
+
+   @Accessor("activeRecipe")
    void aeind$setActiveRecipe(RecipeHolder<MachineRecipe> var1);
 
    @Accessor("delayedActiveRecipe")

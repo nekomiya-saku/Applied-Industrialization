@@ -58,6 +58,20 @@ public final class TesseractCrossThreadRecipeManager {
 
     public boolean hasWork() { return states.values().stream().anyMatch(State::hasWork); }
 
+    public void readNbt(CompoundTag tag, HolderLookup.Provider lookup, MachineBlockEntity machine,
+                        MultipliedCrafterComponent crafter) {
+        readNbt(tag, lookup);
+        ModularCrafterAccessBehavior behavior = crafter.getBehavior();
+        for (State state : states.values()) {
+            RecipeHolder<MachineRecipe> recipe = getRecipe(crafter.getRecipeType(), behavior.getCrafterWorld(), state.recipeId);
+            state.machine = machine;
+            state.recipeHolder = recipe;
+            state.efficiencyTicks = CrossThreadEfficiencyBridge.readNbt(
+                machine, crafter, recipe, state.maxEfficiencyTicks, state.efficiencyTicks, state.currentRecipeMaxEu
+            );
+        }
+    }
+
     public boolean tick(MachineBlockEntity machine, MultipliedCrafterComponent crafter, ThreadIsolationAccess access, boolean crossThread) {
         CrafterComponent.Inventory inventory = (CrafterComponent.Inventory)crafter.getInventory();
         ModularCrafterAccessBehavior behavior = crafter.getBehavior();
@@ -72,6 +86,10 @@ public final class TesseractCrossThreadRecipeManager {
         for (ThreadIsolationRoom room : rooms.values()) {
             if (!crossThread && hasWork()) break;
             State state = states.computeIfAbsent(room.id(), State::new);
+            RecipeHolder<MachineRecipe> previousRecipe = getRecipe(crafter.getRecipeType(), behavior.getCrafterWorld(), state.recipeId);
+            state.efficiencyTicks = CrossThreadEfficiencyBridge.tickStart(
+                machine, crafter, previousRecipe, state.maxEfficiencyTicks, state.efficiencyTicks, state.currentRecipeMaxEu
+            );
             if (!state.hasWork()) changed |= start(machine, crafter, room, state, limit);
         }
 
@@ -81,11 +99,14 @@ public final class TesseractCrossThreadRecipeManager {
             for (State state : running) {
                 RecipeHolder<MachineRecipe> holder = getRecipe(crafter.getRecipeType(), behavior.getCrafterWorld(), state.recipeId);
                 if (holder == null || !holder.value().conditionsMatch(context(machine))) continue;
+                state.machine = machine;
+                state.recipeHolder = holder;
                 long perTick = recipeMaxEu(crafter, holder.value(), state);
+                state.currentRecipeMaxEu = perTick;
                 long amount = Math.min(Math.min(perTick, state.totalEnergy - state.usedEnergy), available);
-                if (amount <= 0) continue;
-                long consumed = behavior.consumeEu(amount, Simulation.ACT);
+                long consumed = amount <= 0 ? 0L : behavior.consumeEu(amount, Simulation.ACT);
                 available -= consumed;
+                state.lastConsumedEnergy = consumed;
                 state.usedEnergy = satAdd(state.usedEnergy, consumed);
                 lastEuPerTick = satAdd(lastEuPerTick, consumed);
                 changed |= consumed > 0;
@@ -93,9 +114,19 @@ public final class TesseractCrossThreadRecipeManager {
                     finish(crafter, holder.value(), state);
                     changed = true;
                 } else if (consumed < perTick && state.efficiencyTicks > 0) {
-                    state.efficiencyTicks--;
+                    state.efficiencyTicks = CrossThreadEfficiencyBridge.decrease(
+                        machine, crafter, holder, state.maxEfficiencyTicks, state.efficiencyTicks, state.currentRecipeMaxEu
+                    );
                 }
             }
+        }
+        for (State state : running) {
+            RecipeHolder<MachineRecipe> recipe = getRecipe(crafter.getRecipeType(), behavior.getCrafterWorld(), state.recipeId);
+            state.efficiencyTicks = CrossThreadEfficiencyBridge.tickEnd(
+                machine, crafter, recipe, state.maxEfficiencyTicks, state.efficiencyTicks,
+                state.currentRecipeMaxEu, state.lastConsumedEnergy
+            );
+            state.lastConsumedEnergy = 0L;
         }
         changed |= flushOutputs(inventory);
         return finishTick(machine, rooms, changed);
@@ -128,8 +159,9 @@ public final class TesseractCrossThreadRecipeManager {
         int parallel = findParallel(crafter, room, selected.value(), limit);
         if (parallel <= 0 || !takeInputs(crafter, room, selected.value(), parallel)) return false;
         state.recipeId = selected.id(); state.parallel = parallel; state.running = true; state.outputsReady = false;
+        state.machine = machine; state.recipeHolder = selected;
         state.usedEnergy = 0; state.totalEnergy = transformed(crafter, selected.value().getTotalEu(), parallel);
-        state.maxEfficiencyTicks = maxEfficiencyTicks(crafter, selected.value(), parallel);
+        state.maxEfficiencyTicks = maxEfficiencyTicks(machine, crafter, state, selected);
         state.efficiencyTicks = Math.min(Math.max(0, state.efficiencyTicks), state.maxEfficiencyTicks);
         state.heldItems = maxItems(selected.value(), parallel); state.heldFluids = maxFluids(selected.value(), parallel, behavior.getMaxFluidOutputs());
         return true;
@@ -204,16 +236,26 @@ public final class TesseractCrossThreadRecipeManager {
         long total=state.totalEnergy;
         long base=Math.max(transformed(crafter,crafter.getBehavior().getBaseRecipeEu(),state.parallel),transformed(crafter,recipe.eu,state.parallel));
         long overclocked=base+(long)state.efficiencyTicks*total/600L;
-        long maximum=transformedMax(crafter,crafter.getBehavior().getMaxRecipeEu(),crafter.getBehavior().getMaxRecipeEuBonus(),state.parallel);
+        long rawMaximum=crafter.getBehavior().getBaseMaxRecipeEu()+crafter.getBehavior().getMaxRecipeEuBonus();
+        long maximum=transformedMax(crafter, CrossThreadEfficiencyBridge.maxRecipeEu(
+            state.machine, crafter, state.recipeHolder, state.maxEfficiencyTicks, state.efficiencyTicks, rawMaximum, state.parallel
+        ), 0, state.parallel);
         return Math.max(1L,Math.min(total,Math.min(overclocked,maximum)));
     }
-    private static int maxEfficiencyTicks(MultipliedCrafterComponent crafter,MachineRecipe recipe,int parallel){
+    private static int maxEfficiencyTicks(MachineBlockEntity machine, MultipliedCrafterComponent crafter,State state,RecipeHolder<MachineRecipe> holder){
+        MachineRecipe recipe = holder.value(); int parallel = state.parallel;
         long total=transformed(crafter,recipe.getTotalEu(),parallel);
-        long maximum=Math.min(transformedMax(crafter,crafter.getBehavior().getMaxRecipeEu(),crafter.getBehavior().getMaxRecipeEuBonus(),parallel),total);
+        long rawMaximum=crafter.getBehavior().getBaseMaxRecipeEu()+crafter.getBehavior().getMaxRecipeEuBonus();
+        long maximum=Math.min(transformedMax(crafter, CrossThreadEfficiencyBridge.maxRecipeEu(
+            machine, crafter, holder, state.maxEfficiencyTicks, 0, rawMaximum, parallel
+        ), 0, parallel),total);
         for(int ticks=0;ticks<Integer.MAX_VALUE;ticks++){
             long base=Math.max(transformed(crafter,crafter.getBehavior().getBaseRecipeEu(),parallel),transformed(crafter,recipe.eu,parallel));
             long overclocked=base+(long)ticks*total/600L;
-            if(Math.min(total,Math.min(overclocked,maximum))==maximum)return ticks;
+            long hookedMaximum=transformedMax(crafter, CrossThreadEfficiencyBridge.maxRecipeEu(
+                machine, crafter, holder, state.maxEfficiencyTicks, ticks, rawMaximum, parallel
+            ), 0, parallel);
+            if(Math.min(total,Math.min(overclocked,hookedMaximum))==maximum)return ticks;
         }
         return 0;
     }
@@ -223,5 +265,5 @@ public final class TesseractCrossThreadRecipeManager {
 
     public void writeNbt(CompoundTag tag, HolderLookup.Provider lookup){ListTag list=new ListTag();for(State s:states.values()){CompoundTag n=new CompoundTag();n.putString("room",s.roomId);if(s.recipeId!=null)n.putString("recipe",s.recipeId.toString());n.putInt("parallel",s.parallel);n.putLong("used",s.usedEnergy);n.putLong("total",s.totalEnergy);n.putInt("efficiency",s.efficiencyTicks);n.putInt("maxEfficiency",s.maxEfficiencyTicks);n.putBoolean("running",s.running);n.putBoolean("outputs",s.outputsReady);ListTag items=new ListTag();for(ConfigurableItemStack stack:s.heldItems)items.add(stack.toNbt(lookup));ListTag fluids=new ListTag();for(ConfigurableFluidStack stack:s.heldFluids)fluids.add(stack.toNbt(lookup));n.put("items",items);n.put("fluids",fluids);list.add(n);}tag.put("threads",list);}
     public void readNbt(CompoundTag tag, HolderLookup.Provider lookup){states.clear();ListTag list=tag.getList("threads",10);for(int i=0;i<list.size();i++){CompoundTag n=list.getCompound(i);String room=n.getString("room");if(room.isEmpty())continue;State s=new State(room);s.recipeId=n.contains("recipe")?ResourceLocation.tryParse(n.getString("recipe")):null;s.parallel=Math.max(1,n.getInt("parallel"));s.usedEnergy=Math.max(0,n.getLong("used"));s.totalEnergy=Math.max(0,n.getLong("total"));s.efficiencyTicks=Math.max(0,n.getInt("efficiency"));s.maxEfficiencyTicks=Math.max(0,n.getInt("maxEfficiency"));s.running=n.getBoolean("running");s.outputsReady=n.getBoolean("outputs");ListTag items=n.getList("items",10);for(int j=0;j<items.size();j++)s.heldItems.add(new ConfigurableItemStack(items.getCompound(j),lookup));ListTag fluids=n.getList("fluids",10);for(int j=0;j<fluids.size();j++)s.heldFluids.add(new ConfigurableFluidStack(fluids.getCompound(j),lookup));states.put(room,s);}}
-    private static final class State { final String roomId; ResourceLocation recipeId; int parallel=1; long usedEnergy,totalEnergy;int efficiencyTicks,maxEfficiencyTicks;boolean running,outputsReady;List<ConfigurableItemStack> heldItems=new ArrayList<>();List<ConfigurableFluidStack> heldFluids=new ArrayList<>();State(String id){roomId=id;}boolean hasWork(){return running||outputsReady;} }
+    private static final class State { final String roomId; ResourceLocation recipeId; RecipeHolder<MachineRecipe> recipeHolder; MachineBlockEntity machine; int parallel=1; long usedEnergy,totalEnergy,currentRecipeMaxEu,lastConsumedEnergy;int efficiencyTicks,maxEfficiencyTicks;boolean running,outputsReady;List<ConfigurableItemStack> heldItems=new ArrayList<>();List<ConfigurableFluidStack> heldFluids=new ArrayList<>();State(String id){roomId=id;}boolean hasWork(){return running||outputsReady;} }
 }
