@@ -35,7 +35,7 @@ public final class CrossThreadProgressGuiClient extends GuiComponentClient<Unit,
          if (!CrossThreadProgressGuiClient.this.data.threads().isEmpty()) {
             Font var4 = Minecraft.getInstance().font;
             int var5 = CrossThreadProgressGuiClient.this.data.threads().stream().mapToInt(CrossThreadProgressGui.ThreadData::parallel).sum();
-            MutableComponent var6 = Component.translatable("gui.aeind.cross_thread.title", CrossThreadProgressGuiClient.this.data.threads().size(), var5);
+            MutableComponent var6 = Component.translatable("gui.aeind.cross_thread.title", CrossThreadProgressGuiClient.this.data.threads().size(), var5, CrossThreadProgressGuiClient.this.data.euPerTick());
             var1.drawString(var4, var6, var2 + 10, var3 + 58, 16777215, false);
             int var7 = Math.min(2, CrossThreadProgressGuiClient.this.data.threads().size());
 
@@ -82,7 +82,7 @@ public final class CrossThreadProgressGuiClient extends GuiComponentClient<Unit,
             int var8 = CrossThreadProgressGuiClient.this.data.threads().stream().mapToInt(CrossThreadProgressGui.ThreadData::parallel).sum();
             ArrayList<Component> var9 = new ArrayList<>();
             var9.add(
-               Component.translatable("gui.aeind.cross_thread.title", CrossThreadProgressGuiClient.this.data.threads().size(), var8)
+               Component.translatable("gui.aeind.cross_thread.title", CrossThreadProgressGuiClient.this.data.threads().size(), var8, CrossThreadProgressGuiClient.this.data.euPerTick())
                   .withStyle(ChatFormatting.AQUA)
             );
 

@@ -17,7 +17,7 @@
   "gui.aeind.button.redstone.ignore": "红石:忽略",
   "gui.aeind.button.redstone.high": "红石:高信号",
   "gui.aeind.button.redstone.low": "红石:低信号",
-  "gui.aeind.cross_thread.title": "跨线程并行：%s线程，%s并行",
+    "gui.aeind.cross_thread.title": "跨线程并行：%s线程，%s并行，%s EU/t",
   "gui.aeind.cross_thread.thread": "线程%s  %s%%  %s并行",
   "gui.aeind.cross_thread.thread_tooltip": "线程%s：%s%%，%s并行（%s）",
   "gui.aeind.cross_thread.running": "运行中",

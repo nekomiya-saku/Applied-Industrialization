@@ -16,63 +16,33 @@ java {
 
 repositories {
     mavenLocal()
-
-    def aliyunPublic = maven {
-        name = 'AliyunPublic'
-        url = uri('https://maven.aliyun.com/repository/public/')
+    maven { url "https://maven.aliyun.com/repository/public/" }
+    maven { url "https://maven.aliyun.com/repository/google/" }
+    maven { url "https://repo.huaweicloud.com/repository/maven/" }
+    maven { url "https://mirrors.cloud.tencent.com/nexus/repository/maven-public/" }
+    maven {
+        url "https://www.cursemaven.com"
     }
     maven {
-        name = 'AliyunGoogle'
-        url = uri('https://maven.aliyun.com/repository/google/')
-    }
-    def huaweiCloud = maven {
-        name = 'HuaweiCloud'
-        url = uri('https://repo.huaweicloud.com/repository/maven/')
-    }
-    def tencentCloud = maven {
-        name = 'TencentCloud'
-        url = uri('https://mirrors.cloud.tencent.com/nexus/repository/maven-public/')
-    }
-
-    // Keep LWJGL on domestic mirrors. ModDev also adds libraries.minecraft.net,
-    // which can fail TLS negotiation on some mainland networks.
-    exclusiveContent {
-        forRepositories(aliyunPublic, huaweiCloud, tencentCloud)
-        filter { includeGroup 'org.lwjgl' }
-    }
-
-    maven {
-        name = 'CurseMaven'
-        url = uri('https://www.cursemaven.com')
-        content { includeGroup 'curse.maven' }
+        url "https://spongepowered.org/maven/"
     }
     maven {
-        name = 'SpongePowered'
-        url = uri('https://spongepowered.org/maven/')
-    }
-    maven {
-        name = 'MekanismModMaven'
-        url = uri('https://modmaven.dev/mekanism/Mekanism/')
-    }
-    maven {
-        name = 'ModMaven'
-        url = uri('https://modmaven.dev')
-        content { includeGroup 'appeng' }
+        url "https://modmaven.dev/mekanism/Mekanism/"
     }
     exclusiveContent {
         forRepository {
             maven {
-                name = 'Modrinth'
-                url = uri('https://api.modrinth.com/maven')
+                name = "Modrinth"
+                url "https://api.modrinth.com/maven"
             }
         }
-        filter { includeGroup 'maven.modrinth' }
+        filter {
+            includeGroup "maven.modrinth"
+        }
     }
-    flatDir { dirs 'libs' }
-
-    // NeoForge artifacts are not guaranteed to exist on general-purpose mirrors.
-    // This remains after the domestic mirrors as a compatibility fallback.
-    maven { url = 'https://maven.neoforged.net/releases' }
+    flatDir {
+        dir 'libs'
+    }
     mavenCentral()
 }
 
@@ -104,6 +74,7 @@ dependencies {
     compileOnly files('libs/appliedenergistics2-19.2.17.jar')
     compileOnly files('libs/Modern-Industrialization-2.5.6.jar')
     compileOnly files('libs/Jade-1.21.1-NeoForge-15.10.6.jar')
+    compileOnly files('libs/tesseract-api-neoforge-1.12.13-1.21.1.jar')
 }
 
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }

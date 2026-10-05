@@ -9,6 +9,8 @@ import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
 public final class AeindMixinConfigPlugin implements IMixinConfigPlugin {
    private static final String JADE_MIXIN = "aeind.mixin.MachineComponentFluidsProviderMixin";
+   private static final String TESSERACT_MIXIN_PREFIX = "aeind.mixin.Tesseract";
+   private static final String TESSERACT_ACCESSOR = "aeind.mixin.MultipliedCrafterComponentAccessor";
 
    @Override
    public void onLoad(String mixinPackage) {
@@ -21,7 +23,11 @@ public final class AeindMixinConfigPlugin implements IMixinConfigPlugin {
 
    @Override
    public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-      return !JADE_MIXIN.equals(mixinClassName) || LoadingModList.get().getModFileById("jade") != null;
+      if (JADE_MIXIN.equals(mixinClassName)) {
+         return LoadingModList.get().getModFileById("jade") != null;
+      }
+      return (!mixinClassName.startsWith(TESSERACT_MIXIN_PREFIX) && !TESSERACT_ACCESSOR.equals(mixinClassName))
+         || LoadingModList.get().getModFileById("tesseract_api") != null;
    }
 
    @Override

@@ -17,7 +17,7 @@
   "gui.aeind.button.redstone.ignore": "Redstone: Ignore",
   "gui.aeind.button.redstone.high": "Redstone: High",
   "gui.aeind.button.redstone.low": "Redstone: Low",
-  "gui.aeind.cross_thread.title": "Cross-thread parallel: %s threads, %s parallel",
+    "gui.aeind.cross_thread.title": "Cross-thread parallel: %s threads, %s parallel, %s EU/t",
   "gui.aeind.cross_thread.thread": "Thread %s  %s%%  %s parallel",
   "gui.aeind.cross_thread.thread_tooltip": "Thread %s: %s%%, %s parallel (%s)",
   "gui.aeind.cross_thread.running": "Running",

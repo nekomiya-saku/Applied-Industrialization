@@ -47,6 +47,8 @@ public final class CrossThreadRecipeManager {
    private static final Logger LOGGER = LogUtils.getLogger();
    private final Map<String, CrossThreadRecipeManager.RecipeThreadState> states = new LinkedHashMap<>();
    private final Map<String, Integer> reportedParallelByRoom = new LinkedHashMap<>();
+   private TesseractCrossThreadRecipeManager tesseractManager;
+   private long lastEuPerTick;
    private int fairnessCursor;
 
    public boolean hasWork() {
@@ -103,7 +105,27 @@ public final class CrossThreadRecipeManager {
             return new CrossThreadRecipeManager.ThreadProgress(var3, Math.max(1, var0.parallel), var0.outputsReady);
          })
          .toList();
+      if (this.tesseractManager != null) {
+         var1 = new ArrayList<>(var1);
+         var1.addAll(this.tesseractManager.progress());
+      }
       return new CrossThreadRecipeManager.ProgressSnapshot(var1);
+   }
+
+   public long getLastEuPerTick() {
+      return this.lastEuPerTick;
+   }
+
+   public boolean tickTesseract(
+      MachineBlockEntity machine,
+      net.swedz.tesseract.neoforge.compat.mi.component.craft.multiplied.MultipliedCrafterComponent crafter,
+      ThreadIsolationAccess access,
+      boolean crossThread
+   ) {
+      if (this.tesseractManager == null) this.tesseractManager = new TesseractCrossThreadRecipeManager();
+      boolean active = this.tesseractManager.tick(machine, crafter, access, crossThread);
+      this.lastEuPerTick = this.tesseractManager.lastEuPerTick();
+      return active;
    }
 
    public boolean tick(MachineBlockEntity var1, CrafterComponent var2, ThreadIsolationAccess var3, boolean var4) {
@@ -115,6 +137,7 @@ public final class CrossThreadRecipeManager {
       }
 
       boolean var29 = this.flushCompletedOutputs(var2.getInventory());
+      this.lastEuPerTick = 0L;
       if (var5.isEnabled()) {
          int var31 = var4 ? MIParallelHatchCompat.getParallelLimit(var1) : 1;
          int var9 = var4 ? Math.max(Math.max(1, var3.aeind$maxParallelPerThread()), var31) : 1;
@@ -171,6 +194,7 @@ public final class CrossThreadRecipeManager {
             var37 -= var27;
             var17--;
             var20.usedEnergy = saturatedAdd(var20.usedEnergy, var27);
+            this.lastEuPerTick = saturatedAdd(this.lastEuPerTick, var27);
             var33 |= var27 > 0L;
             if (var27 < var21 && var20.efficiencyTicks > 0) {
                var20.efficiencyTicks--;
@@ -805,10 +829,16 @@ public final class CrossThreadRecipeManager {
 
       var3.put("threads", var4);
       var1.put("aeindCrossThreadRecipes", var3);
+      if (this.tesseractManager != null) {
+         CompoundTag tesseract = new CompoundTag();
+         this.tesseractManager.writeNbt(tesseract, var2);
+         var1.put("aeindTesseractCrossThreadRecipes", tesseract);
+      }
    }
 
    public void readNbt(CompoundTag var1, HolderLookup.Provider var2) {
       this.states.clear();
+      this.lastEuPerTick = 0L;
       if (var1.contains("aeindCrossThreadRecipes", 10)) {
          CompoundTag var3 = var1.getCompound("aeindCrossThreadRecipes");
          this.fairnessCursor = var3.getInt("fairnessCursor");
@@ -834,6 +864,10 @@ public final class CrossThreadRecipeManager {
                this.states.put(var7, var8);
             }
          }
+      }
+      if (var1.contains("aeindTesseractCrossThreadRecipes", 10)) {
+         this.tesseractManager = new TesseractCrossThreadRecipeManager();
+         this.tesseractManager.readNbt(var1.getCompound("aeindTesseractCrossThreadRecipes"), var2);
       }
    }
 

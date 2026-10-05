@@ -30,7 +30,7 @@ public final class CrossThreadProgressGui implements GuiComponentServer<Unit, Cr
          .stream()
          .map(var0 -> new CrossThreadProgressGui.ThreadData(var0.progress(), var0.parallel(), var0.outputsReady()))
          .toList();
-      return new CrossThreadProgressGui.Data(var1);
+      return new CrossThreadProgressGui.Data(var1, this.manager.getLastEuPerTick());
    }
 
    @Override
@@ -38,10 +38,14 @@ public final class CrossThreadProgressGui implements GuiComponentServer<Unit, Cr
       return TYPE;
    }
 
-   public record Data(List<CrossThreadProgressGui.ThreadData> threads) {
-      public static final StreamCodec<RegistryFriendlyByteBuf, CrossThreadProgressGui.Data> STREAM_CODEC = CrossThreadProgressGui.ThreadData.STREAM_CODEC
-         .apply(ByteBufCodecs.list())
-         .map(CrossThreadProgressGui.Data::new, CrossThreadProgressGui.Data::threads);
+   public record Data(List<CrossThreadProgressGui.ThreadData> threads, long euPerTick) {
+      public static final StreamCodec<RegistryFriendlyByteBuf, CrossThreadProgressGui.Data> STREAM_CODEC = StreamCodec.composite(
+         CrossThreadProgressGui.ThreadData.STREAM_CODEC.apply(ByteBufCodecs.list()),
+         CrossThreadProgressGui.Data::threads,
+         ByteBufCodecs.VAR_LONG,
+         CrossThreadProgressGui.Data::euPerTick,
+         CrossThreadProgressGui.Data::new
+      );
    }
 
    public record ThreadData(float progress, int parallel, boolean outputsReady) {

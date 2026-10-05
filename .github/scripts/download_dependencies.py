@@ -21,6 +21,11 @@ DEPENDENCIES = (
         "https://cdn.modrinth.com/data/nvQzSEkH/versions/eYz2YBGT/Jade-1.21.1-NeoForge-15.10.6.jar",
         "dad9755dce8d85d914fc4df2baa0211f13e5839a71c1925fdd01f69081a95e30a2934e6273f8b01f0169adebe7a9dae57a8d904de0c4cb36dc17369bb474f0f2",
     ),
+    (
+        "libs/tesseract-api-neoforge-1.12.13-1.21.1.jar",
+        "https://cdn.modrinth.com/data/pHNT1iyc/versions/KirqXJ5z/tesseract-api-neoforge-1.12.13-1.21.1.jar",
+        "d3326e05ba38b097676069a7289dec864b5b1449c5444b3702784bcaa361117a941b0220aaa39ccd1039593c60432434772ef0e0c4e85aedfb391681f4958357",
+    ),
 )
 
 
