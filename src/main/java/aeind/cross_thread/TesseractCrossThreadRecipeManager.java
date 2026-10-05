@@ -79,22 +79,31 @@ public final class TesseractCrossThreadRecipeManager {
         for (ThreadIsolationRoom room : access.aeind$isolationRooms()) rooms.putIfAbsent(room.id(), room);
         boolean changed = flushOutputs(inventory);
         lastEuPerTick = 0;
-        if (!behavior.isEnabled()) return finishTick(machine, rooms, changed);
 
         int arrayLimit = Math.max(1, crafter.getMaxMultiplier());
         int limit = crossThread ? Math.max(arrayLimit, access.aeind$maxParallelPerThread()) : 1;
         for (ThreadIsolationRoom room : rooms.values()) {
-            if (!crossThread && hasWork()) break;
-            State state = states.computeIfAbsent(room.id(), State::new);
-            RecipeHolder<MachineRecipe> previousRecipe = getRecipe(crafter.getRecipeType(), behavior.getCrafterWorld(), state.recipeId);
+            states.computeIfAbsent(room.id(), State::new);
+        }
+        List<State> tickStates = new ArrayList<>(states.values());
+        for (State state : tickStates) {
+            RecipeHolder<MachineRecipe> previousRecipe = getRecipe(
+                crafter.getRecipeType(), behavior.getCrafterWorld(), state.recipeId
+            );
             state.efficiencyTicks = CrossThreadEfficiencyBridge.tickStart(
                 machine, crafter, previousRecipe, state.maxEfficiencyTicks, state.efficiencyTicks, state.currentRecipeMaxEu
             );
-            if (!state.hasWork()) changed |= start(machine, crafter, room, state, limit);
+        }
+        if (behavior.isEnabled()) {
+            for (ThreadIsolationRoom room : rooms.values()) {
+                if (!crossThread && hasWork()) break;
+                State state = states.get(room.id());
+                if (!state.hasWork()) changed |= start(machine, crafter, room, state, limit);
+            }
         }
 
         List<State> running = states.values().stream().filter(s -> s.running).toList();
-        if (!running.isEmpty()) {
+        if (!running.isEmpty() && behavior.isEnabled()) {
             long available = behavior.consumeEu(Long.MAX_VALUE, Simulation.SIMULATE);
             for (State state : running) {
                 RecipeHolder<MachineRecipe> holder = getRecipe(crafter.getRecipeType(), behavior.getCrafterWorld(), state.recipeId);
@@ -120,7 +129,7 @@ public final class TesseractCrossThreadRecipeManager {
                 }
             }
         }
-        for (State state : running) {
+        for (State state : tickStates) {
             RecipeHolder<MachineRecipe> recipe = getRecipe(crafter.getRecipeType(), behavior.getCrafterWorld(), state.recipeId);
             state.efficiencyTicks = CrossThreadEfficiencyBridge.tickEnd(
                 machine, crafter, recipe, state.maxEfficiencyTicks, state.efficiencyTicks,

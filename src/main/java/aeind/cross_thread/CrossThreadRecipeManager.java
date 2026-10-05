@@ -31,6 +31,7 @@ import com.mojang.logging.LogUtils;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -142,6 +143,10 @@ public final class CrossThreadRecipeManager {
       for (ThreadIsolationRoom room : roomList) {
          RecipeThreadState state = this.states.computeIfAbsent(room.id(), RecipeThreadState::new);
          roomStates.add(state);
+      }
+      List<RecipeThreadState> tickStates = new ArrayList<>(this.states.values());
+      Map<RecipeThreadState, Long> consumedByState = new IdentityHashMap<>();
+      for (RecipeThreadState state : tickStates) {
          RecipeHolder<MachineRecipe> recipe = getRecipe(behavior, state.recipeId);
          state.efficiencyTicks = CrossThreadEfficiencyBridge.tickStart(
             machine, crafter, recipe, state.maxEfficiencyTicks, state.efficiencyTicks, state.currentRecipeMaxEu
@@ -190,7 +195,6 @@ public final class CrossThreadRecipeManager {
          }
 
          long available = behavior.consumeEu(availableTarget, Simulation.SIMULATE);
-         long[] consumed = new long[running.size()];
          int count = running.size();
          int cursor = Math.floorMod(this.fairnessCursor++, count);
          int remainingThreads = count;
@@ -203,7 +207,7 @@ public final class CrossThreadRecipeManager {
             long eu = amount == 0L ? 0L : behavior.consumeEu(amount, Simulation.ACT);
             available -= eu;
             remainingThreads--;
-            consumed[index] = eu;
+            consumedByState.put(state, eu);
             state.usedEnergy = saturatedAdd(state.usedEnergy, eu);
             this.lastEuPerTick = saturatedAdd(this.lastEuPerTick, eu);
             active |= eu > 0L;
@@ -220,14 +224,14 @@ public final class CrossThreadRecipeManager {
             }
          }
 
-         for (int index = 0; index < running.size(); index++) {
-            RecipeThreadState state = running.get(index);
-            RecipeHolder<MachineRecipe> recipe = getRecipe(behavior, state.recipeId);
-            state.efficiencyTicks = CrossThreadEfficiencyBridge.tickEnd(
-               machine, crafter, recipe, state.maxEfficiencyTicks, state.efficiencyTicks,
-               state.currentRecipeMaxEu, consumed[index]
-            );
-         }
+      }
+
+      for (RecipeThreadState state : tickStates) {
+         RecipeHolder<MachineRecipe> recipe = getRecipe(behavior, state.recipeId);
+         state.efficiencyTicks = CrossThreadEfficiencyBridge.tickEnd(
+            machine, crafter, recipe, state.maxEfficiencyTicks, state.efficiencyTicks,
+            state.currentRecipeMaxEu, consumedByState.getOrDefault(state, 0L)
+         );
       }
 
       changed |= this.flushCompletedOutputs(crafter.getInventory());
