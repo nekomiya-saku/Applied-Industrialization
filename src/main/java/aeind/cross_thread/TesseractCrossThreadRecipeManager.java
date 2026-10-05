@@ -236,25 +236,25 @@ public final class TesseractCrossThreadRecipeManager {
         long total=state.totalEnergy;
         long base=Math.max(transformed(crafter,crafter.getBehavior().getBaseRecipeEu(),state.parallel),transformed(crafter,recipe.eu,state.parallel));
         long overclocked=base+(long)state.efficiencyTicks*total/600L;
-        long rawMaximum=crafter.getBehavior().getBaseMaxRecipeEu()+crafter.getBehavior().getMaxRecipeEuBonus();
+        long rawMaximum=crafter.getBehavior().getBaseMaxRecipeEu();
         long maximum=transformedMax(crafter, CrossThreadEfficiencyBridge.maxRecipeEu(
             state.machine, crafter, state.recipeHolder, state.maxEfficiencyTicks, state.efficiencyTicks, rawMaximum, state.parallel
-        ), 0, state.parallel);
+        ), crafter.getBehavior().getMaxRecipeEuBonus(), state.parallel);
         return Math.max(1L,Math.min(total,Math.min(overclocked,maximum)));
     }
     private static int maxEfficiencyTicks(MachineBlockEntity machine, MultipliedCrafterComponent crafter,State state,RecipeHolder<MachineRecipe> holder){
         MachineRecipe recipe = holder.value(); int parallel = state.parallel;
         long total=transformed(crafter,recipe.getTotalEu(),parallel);
-        long rawMaximum=crafter.getBehavior().getBaseMaxRecipeEu()+crafter.getBehavior().getMaxRecipeEuBonus();
+        long rawMaximum=crafter.getBehavior().getBaseMaxRecipeEu();
         long maximum=Math.min(transformedMax(crafter, CrossThreadEfficiencyBridge.maxRecipeEu(
             machine, crafter, holder, state.maxEfficiencyTicks, 0, rawMaximum, parallel
-        ), 0, parallel),total);
+        ), crafter.getBehavior().getMaxRecipeEuBonus(), parallel),total);
         for(int ticks=0;ticks<Integer.MAX_VALUE;ticks++){
             long base=Math.max(transformed(crafter,crafter.getBehavior().getBaseRecipeEu(),parallel),transformed(crafter,recipe.eu,parallel));
             long overclocked=base+(long)ticks*total/600L;
             long hookedMaximum=transformedMax(crafter, CrossThreadEfficiencyBridge.maxRecipeEu(
                 machine, crafter, holder, state.maxEfficiencyTicks, ticks, rawMaximum, parallel
-            ), 0, parallel);
+            ), crafter.getBehavior().getMaxRecipeEuBonus(), parallel);
             if(Math.min(total,Math.min(overclocked,hookedMaximum))==maximum)return ticks;
         }
         return 0;
