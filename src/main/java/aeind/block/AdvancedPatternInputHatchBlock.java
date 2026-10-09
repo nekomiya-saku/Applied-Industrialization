@@ -14,6 +14,8 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Containers;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -52,6 +54,13 @@ public class AdvancedPatternInputHatchBlock extends BaseEntityBlock {
    @Override
    protected RenderShape getRenderShape(BlockState var1) {
       return RenderShape.MODEL;
+   }
+
+   /** Keep item-driven interactions (including AE2's quartz cutting knife) on the item path. */
+   @Override
+   protected ItemInteractionResult useItemOn(ItemStack var1, BlockState var2, Level var3, BlockPos var4,
+                                             Player var5, InteractionHand var6, BlockHitResult var7) {
+      return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
    }
 
    @Override
