@@ -20,7 +20,7 @@ public abstract class MachineBlockEntityMixin {
 
    @Inject(method = "load", at = @At("TAIL"))
    private void aeind$loadCrossThreadRecipes(CompoundTag var1, HolderLookup.Provider var2, boolean var3, CallbackInfo var4) {
-      if (this instanceof CrossThreadControllerAccess access) {
+      if (!var1.contains("remesh") && this instanceof CrossThreadControllerAccess access) {
          access.aeind$getCrossThreadManager().readNbt(var1, var2, (MachineBlockEntity)(Object)this);
       }
    }
