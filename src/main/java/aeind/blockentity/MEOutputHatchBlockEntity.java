@@ -351,10 +351,15 @@ VirtualOutputSink {
     }
 
     /** Accepts an output already represented by an AE2 key, including optional integration types. */
-    public void acceptGenericOutput(AEKey key, long amount) {
-        if (key != null && amount > 0L) {
-            this.outputBuffer.insert(key, amount, Actionable.MODULATE);
+    public long acceptGenericOutput(AEKey key, long amount, Actionable mode) {
+        if (key == null || amount <= 0L) {
+            return 0L;
         }
+        return this.outputBuffer.insert(key, amount, mode);
+    }
+
+    public void acceptGenericOutput(AEKey key, long amount) {
+        this.acceptGenericOutput(key, amount, Actionable.MODULATE);
     }
 
     public void addOutputDrops(List<ItemStack> list) {
