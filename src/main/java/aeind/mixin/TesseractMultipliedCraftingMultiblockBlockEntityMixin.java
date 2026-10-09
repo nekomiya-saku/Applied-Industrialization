@@ -34,4 +34,17 @@ public abstract class TesseractMultipliedCraftingMultiblockBlockEntityMixin impl
         }
         return component.tickRecipe();
     }
+
+    @Redirect(method = "tick", at = @At(value = "INVOKE", target = "Lnet/swedz/tesseract/neoforge/compat/mi/component/craft/multiplied/MultipliedCrafterComponent;tryContinueRecipe()Z", remap = false))
+    private boolean aeind$resumeIsolatedTesseract(MultipliedCrafterComponent component) {
+        if (!((Object)this instanceof MachineBlockEntity)) return component.tryContinueRecipe();
+        if (!(component.getInventory() instanceof ThreadIsolationAccess access)) return component.tryContinueRecipe();
+        boolean mapRooms = access.aeind$isolationRooms().stream().anyMatch(ThreadIsolationRoom::hasMapStorage);
+        if (access.aeind$crossThreadEnabled() || mapRooms || aeind$crossThreadManager.hasWork()) {
+            // The custom manager owns the in-flight recipe after a reload. Tesseract's
+            // native resume state has no corresponding active recipe to restore.
+            return true;
+        }
+        return component.tryContinueRecipe();
+    }
 }

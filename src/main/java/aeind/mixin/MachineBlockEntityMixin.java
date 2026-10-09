@@ -18,10 +18,10 @@ public abstract class MachineBlockEntityMixin {
       }
    }
 
-   @Inject(method = "loadAdditional", at = @At("TAIL"))
-   private void aeind$loadCrossThreadRecipes(CompoundTag var1, HolderLookup.Provider var2, CallbackInfo var3) {
-      if (this instanceof CrossThreadControllerAccess var4) {
-         var4.aeind$getCrossThreadManager().readNbt(var1, var2, (MachineBlockEntity)(Object)this);
+   @Inject(method = "load", at = @At("TAIL"))
+   private void aeind$loadCrossThreadRecipes(CompoundTag var1, HolderLookup.Provider var2, boolean var3, CallbackInfo var4) {
+      if (this instanceof CrossThreadControllerAccess access) {
+         access.aeind$getCrossThreadManager().readNbt(var1, var2, (MachineBlockEntity)(Object)this);
       }
    }
 }
