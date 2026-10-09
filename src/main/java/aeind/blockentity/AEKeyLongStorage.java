@@ -21,6 +21,7 @@ import net.minecraft.world.item.ItemStack;
 public final class AEKeyLongStorage {
     private final Map<AEKey, Long> contents = new LinkedHashMap<>();
     private final Runnable onChanged;
+    private long revision;
 
     public AEKeyLongStorage(Runnable onChanged) {
         this.onChanged = onChanged;
@@ -42,6 +43,11 @@ public final class AEKeyLongStorage {
         return Collections.unmodifiableMap(new LinkedHashMap<>(this.contents));
     }
 
+    /** Monotonically changes whenever the contents are modulated. */
+    public long revision() {
+        return this.revision;
+    }
+
     public long insert(AEKey key, long amount, Actionable mode) {
         if (key == null || amount <= 0L) {
             return 0L;
@@ -50,6 +56,7 @@ public final class AEKeyLongStorage {
         long inserted = Math.min(amount, Long.MAX_VALUE - stored);
         if (inserted > 0L && mode == Actionable.MODULATE) {
             this.contents.put(key, stored + inserted);
+            ++this.revision;
             this.onChanged.run();
         }
         return inserted;
@@ -68,6 +75,7 @@ public final class AEKeyLongStorage {
             } else {
                 this.contents.put(key, remaining);
             }
+            ++this.revision;
             this.onChanged.run();
         }
         return extracted;
@@ -108,6 +116,7 @@ public final class AEKeyLongStorage {
             changed = true;
         }
         if (changed) {
+            ++this.revision;
             this.onChanged.run();
         }
         return true;
@@ -116,6 +125,7 @@ public final class AEKeyLongStorage {
     public void clear() {
         if (!this.contents.isEmpty()) {
             this.contents.clear();
+            ++this.revision;
             this.onChanged.run();
         }
     }
@@ -184,6 +194,7 @@ public final class AEKeyLongStorage {
             long stored = this.contents.getOrDefault(stack.what(), 0L);
             this.contents.put(stack.what(), saturatedAdd(stored, stack.amount()));
         }
+        ++this.revision;
     }
 
     public void addItemDrops(List<ItemStack> drops) {

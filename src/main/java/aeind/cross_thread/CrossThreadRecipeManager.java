@@ -45,6 +45,7 @@ import net.minecraft.world.level.material.Fluid;
 import org.slf4j.Logger;
 
 public final class CrossThreadRecipeManager {
+   private static final int FAILED_PROBE_RETRY_TICKS = 100;
    public static final String NBT_KEY = "aeindCrossThreadRecipes";
    private static final int NBT_VERSION = 2;
    private static final Logger LOGGER = LogUtils.getLogger();
@@ -160,7 +161,7 @@ public final class CrossThreadRecipeManager {
             ThreadIsolationRoom room = roomList.get(index);
             if (!crossThread && this.hasWork()) break;
             RecipeThreadState state = roomStates.get(index);
-            if (!state.hasWork()) {
+            if (!state.hasWork() && state.shouldProbe(room)) {
                boolean started = this.tryStart(machine, crafter, room, state, limit, crossThread && parallelLimit > 1);
                changed |= started;
                if (!started && state.efficiencyTicks > 0) {
@@ -172,6 +173,8 @@ public final class CrossThreadRecipeManager {
                   if (state.efficiencyTicks == 0) state.recipeId = null;
                   changed |= previous != state.efficiencyTicks;
                }
+            } else if (!state.hasWork()) {
+               state.retryCooldown--;
             }
          }
       }
@@ -253,9 +256,9 @@ public final class CrossThreadRecipeManager {
           RecipeHolder<MachineRecipe> var9 = getRecipe(var7, var4.recipeId);
          if (var9 != null) {
              int var10 = this.findParallel(var2, var3, var9.value(), var5);
-             if (var10 > 0 && var9.value().conditionsMatch(var8)) {
-               return this.startRecipe(var1, var2, var3, var4, var9, var10, var6);
-            }
+              if (var10 > 0 && var9.value().conditionsMatch(var8)) {
+                if (this.startRecipe(var1, var2, var3, var4, var9, var10, var6)) return true;
+             }
          }
       }
 
@@ -271,11 +274,12 @@ public final class CrossThreadRecipeManager {
          if (!var7.banRecipe(var13) && var13.conditionsMatch(var8)) {
             int var14 = this.findParallel(var2, var3, var13, var5);
             if (var14 > 0) {
-               return this.startRecipe(var1, var2, var3, var4, var12, var14, var6);
+               if (this.startRecipe(var1, var2, var3, var4, var12, var14, var6)) return true;
             }
          }
       }
 
+      var4.markProbe(var3);
       return false;
    }
 
@@ -410,10 +414,6 @@ public final class CrossThreadRecipeManager {
    }
 
    private static boolean takeInputs(Behavior var0, ThreadIsolationRoom var1, MachineRecipe var2, int var3) {
-      if (!canTakeInputs(var0, var1, var2, var3)) {
-         return false;
-      }
-
       if (var1.hasMapStorage()) {
          RoomInputStorage storage = var1.inputStorage();
          RoomInputStorage.MiInputView view = storage.createMiView();
@@ -784,6 +784,20 @@ public final class CrossThreadRecipeManager {
       return () -> var0;
    }
 
+   private static long probeFingerprint(ThreadIsolationRoom room) {
+      long hash = room.hasMapStorage() ? room.inputStorage().revision() : 1L;
+      if (!room.hasMapStorage()) {
+         for (ConfigurableItemStack stack : room.itemInputs()) hash = 31L * hash + stack.getResource().hashCode() + stack.getAmount();
+         for (ConfigurableFluidStack stack : room.fluidInputs()) hash = 31L * hash + stack.getResource().hashCode() + stack.getAmount();
+      }
+      if (room.hasCatalystStorage()) {
+         for (it.unimi.dsi.fastutil.objects.Object2LongMap.Entry<AEKey> entry : room.catalystStorage().getAvailableStacks()) {
+            hash = 31L * hash + entry.getKey().hashCode() + entry.getLongValue();
+         }
+      }
+      return hash;
+   }
+
    private static long getRecipeMaxEu(MachineBlockEntity machine, CrafterComponent crafter,
                                       RecipeThreadState state, RecipeHolder<MachineRecipe> holder) {
       return getRecipeMaxEu(machine, crafter, state, holder, state.efficiencyTicks);
@@ -978,6 +992,8 @@ public final class CrossThreadRecipeManager {
       private long currentRecipeMaxEu;
       private int efficiencyTicks;
       private int maxEfficiencyTicks;
+      private long lastProbeFingerprint = Long.MIN_VALUE;
+      private int retryCooldown;
       private boolean running;
       private boolean outputsReady;
       private List<ConfigurableItemStack> heldItemOutputs = new ArrayList<>();
@@ -993,6 +1009,15 @@ public final class CrossThreadRecipeManager {
 
       private boolean hasWork() {
          return this.running || this.outputsReady;
+      }
+
+      private boolean shouldProbe(ThreadIsolationRoom room) {
+         return this.retryCooldown <= 0 || this.lastProbeFingerprint != probeFingerprint(room);
+      }
+
+      private void markProbe(ThreadIsolationRoom room) {
+         this.lastProbeFingerprint = probeFingerprint(room);
+         this.retryCooldown = FAILED_PROBE_RETRY_TICKS;
       }
    }
 

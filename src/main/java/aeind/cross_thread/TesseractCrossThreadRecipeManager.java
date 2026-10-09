@@ -44,6 +44,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /** Cross-thread execution for Tesseract's multiplied crafters (EI and IO arrays). */
 public final class TesseractCrossThreadRecipeManager {
+    private static final int FAILED_PROBE_RETRY_TICKS = 100;
     private final Map<String, State> states = new LinkedHashMap<>();
     private long lastEuPerTick;
 
@@ -98,7 +99,10 @@ public final class TesseractCrossThreadRecipeManager {
             for (ThreadIsolationRoom room : rooms.values()) {
                 if (!crossThread && hasWork()) break;
                 State state = states.get(room.id());
-                if (!state.hasWork()) changed |= start(machine, crafter, room, state, limit);
+                if (!state.hasWork()) {
+                    if (state.shouldProbe(room)) changed |= start(machine, crafter, room, state, limit);
+                    else state.retryCooldown--;
+                }
             }
         }
 
@@ -152,6 +156,7 @@ public final class TesseractCrossThreadRecipeManager {
         ModularCrafterAccessBehavior behavior = crafter.getBehavior();
         RecipeHolder<MachineRecipe> selected = null;
         if (state.recipeId != null && state.efficiencyTicks > 0) selected = getRecipe(crafter.getRecipeType(), behavior.getCrafterWorld(), state.recipeId);
+        int parallel = 0;
         if (selected == null) {
             List<ConfigurableItemStack> items = room.hasMapStorage() ? room.inputStorage().createMiView().itemInputs() : room.itemInputs();
             Collection<RecipeHolder<MachineRecipe>> candidates = new ArrayList<>();
@@ -160,24 +165,26 @@ public final class TesseractCrossThreadRecipeManager {
                 candidates.addAll(type.getFluidOnlyRecipes(behavior.getCrafterWorld()));
                 for (ConfigurableItemStack item : items) if (!item.isEmpty()) candidates.addAll(type.getMatchingRecipes(behavior.getCrafterWorld(), item.getResource().getItem()));
             }
-            for (RecipeHolder<MachineRecipe> candidate : candidates.stream().sorted(Comparator.comparing(h -> h.id().toString())).toList()) {
-                if (!behavior.isRecipeBanned(candidate.value().eu) && candidate.value().conditionsMatch(context(machine)) && canRun(crafter, room, candidate.value(), limit)) { selected = candidate; break; }
+            for (RecipeHolder<MachineRecipe> candidate : candidates.stream().distinct().sorted(Comparator.comparing(h -> h.id().toString())).toList()) {
+                if (!behavior.isRecipeBanned(candidate.value().eu) && candidate.value().conditionsMatch(context(machine))) {
+                    int found = findParallel(crafter, room, candidate.value(), limit);
+                    if (found > 0) { selected = candidate; parallel = found; break; }
+                }
             }
-        } else if (!canRun(crafter, room, selected.value(), limit)) selected = null;
-        if (selected == null) return false;
-        int parallel = findParallel(crafter, room, selected.value(), limit);
-        if (parallel <= 0 || !takeInputs(crafter, room, selected.value(), parallel)) return false;
+        } else {
+            parallel = findParallel(crafter, room, selected.value(), limit);
+        }
+        if (selected == null || parallel <= 0 || !takeInputs(crafter, room, selected.value(), parallel)) {
+            state.markProbe(room);
+            return false;
+        }
         state.recipeId = selected.id(); state.parallel = parallel; state.running = true; state.outputsReady = false;
-        state.machine = machine; state.recipeHolder = selected;
+        state.machine = machine; state.recipeHolder = selected; state.retryCooldown = 0; state.lastProbeFingerprint = Long.MIN_VALUE;
         state.usedEnergy = 0; state.totalEnergy = transformed(crafter, selected.value().getTotalEu(), parallel);
         state.maxEfficiencyTicks = maxEfficiencyTicks(machine, crafter, state, selected);
         state.efficiencyTicks = Math.min(Math.max(0, state.efficiencyTicks), state.maxEfficiencyTicks);
         state.heldItems = maxItems(selected.value(), parallel); state.heldFluids = maxFluids(selected.value(), parallel, behavior.getMaxFluidOutputs());
         return true;
-    }
-
-    private static boolean canRun(MultipliedCrafterComponent crafter, ThreadIsolationRoom room, MachineRecipe recipe, int limit) {
-        return findParallel(crafter, room, recipe, limit) > 0;
     }
 
     private static int findParallel(MultipliedCrafterComponent crafter, ThreadIsolationRoom room, MachineRecipe recipe, int limit) {
@@ -196,7 +203,6 @@ public final class TesseractCrossThreadRecipeManager {
     }
 
     private static boolean takeInputs(MultipliedCrafterComponent crafter, ThreadIsolationRoom room, MachineRecipe recipe, int parallel) {
-        if (!canTake(crafter, room, recipe, parallel)) return false;
         if (!room.hasMapStorage()) return CrafterComponentHelper.takeItemInputs(recipe, false, crafter.getBehavior(), (CrafterComponent.Inventory)crafter.getInventory(), parallel) && CrafterComponentHelper.takeFluidInputs(recipe, false, crafter.getBehavior(), (CrafterComponent.Inventory)crafter.getInventory(), parallel);
         RoomInputStorage storage = room.inputStorage(); RoomInputStorage.MiInputView view = storage.createMiView();
         if (!takeItems(crafter.getBehavior(), view.itemInputs(), recipe, parallel, false) || !takeFluids(crafter.getBehavior(), view.fluidInputs(), recipe, parallel, false)) return false;
@@ -270,9 +276,22 @@ public final class TesseractCrossThreadRecipeManager {
     }
     private static RecipeHolder<MachineRecipe> getRecipe(MachineRecipeType type,ServerLevel world,ResourceLocation id){return type==null||id==null?null:type.getRecipe(world,id);}
     private static Context context(MachineBlockEntity machine){return ()->machine;}
+    private static long fingerprint(ThreadIsolationRoom room) {
+        long hash = room.hasMapStorage() ? room.inputStorage().revision() : 1L;
+        if (!room.hasMapStorage()) {
+            for (ConfigurableItemStack stack : room.itemInputs()) hash = 31L * hash + stack.getResource().hashCode() + stack.getAmount();
+            for (ConfigurableFluidStack stack : room.fluidInputs()) hash = 31L * hash + stack.getResource().hashCode() + stack.getAmount();
+        }
+        if (room.hasCatalystStorage()) {
+            for (it.unimi.dsi.fastutil.objects.Object2LongMap.Entry<AEKey> entry : room.catalystStorage().getAvailableStacks()) {
+                hash = 31L * hash + entry.getKey().hashCode() + entry.getLongValue();
+            }
+        }
+        return hash;
+    }
     private static long satAdd(long a,long b){return Long.MAX_VALUE-a<b?Long.MAX_VALUE:a+b;}
 
     public void writeNbt(CompoundTag tag, HolderLookup.Provider lookup){ListTag list=new ListTag();for(State s:states.values()){CompoundTag n=new CompoundTag();n.putString("room",s.roomId);if(s.recipeId!=null)n.putString("recipe",s.recipeId.toString());n.putInt("parallel",s.parallel);n.putLong("used",s.usedEnergy);n.putLong("total",s.totalEnergy);n.putInt("efficiency",s.efficiencyTicks);n.putInt("maxEfficiency",s.maxEfficiencyTicks);n.putBoolean("running",s.running);n.putBoolean("outputs",s.outputsReady);ListTag items=new ListTag();for(ConfigurableItemStack stack:s.heldItems)items.add(stack.toNbt(lookup));ListTag fluids=new ListTag();for(ConfigurableFluidStack stack:s.heldFluids)fluids.add(stack.toNbt(lookup));n.put("items",items);n.put("fluids",fluids);list.add(n);}tag.put("threads",list);}
     public void readNbt(CompoundTag tag, HolderLookup.Provider lookup){states.clear();ListTag list=tag.getList("threads",10);for(int i=0;i<list.size();i++){CompoundTag n=list.getCompound(i);String room=n.getString("room");if(room.isEmpty())continue;State s=new State(room);s.recipeId=n.contains("recipe")?ResourceLocation.tryParse(n.getString("recipe")):null;s.parallel=Math.max(1,n.getInt("parallel"));s.usedEnergy=Math.max(0,n.getLong("used"));s.totalEnergy=Math.max(0,n.getLong("total"));s.efficiencyTicks=Math.max(0,n.getInt("efficiency"));s.maxEfficiencyTicks=Math.max(0,n.getInt("maxEfficiency"));s.running=n.getBoolean("running");s.outputsReady=n.getBoolean("outputs");ListTag items=n.getList("items",10);for(int j=0;j<items.size();j++)s.heldItems.add(new ConfigurableItemStack(items.getCompound(j),lookup));ListTag fluids=n.getList("fluids",10);for(int j=0;j<fluids.size();j++)s.heldFluids.add(new ConfigurableFluidStack(fluids.getCompound(j),lookup));states.put(room,s);}}
-    private static final class State { final String roomId; ResourceLocation recipeId; RecipeHolder<MachineRecipe> recipeHolder; MachineBlockEntity machine; int parallel=1; long usedEnergy,totalEnergy,currentRecipeMaxEu,lastConsumedEnergy;int efficiencyTicks,maxEfficiencyTicks;boolean running,outputsReady;List<ConfigurableItemStack> heldItems=new ArrayList<>();List<ConfigurableFluidStack> heldFluids=new ArrayList<>();State(String id){roomId=id;}boolean hasWork(){return running||outputsReady;} }
+    private static final class State { final String roomId; ResourceLocation recipeId; RecipeHolder<MachineRecipe> recipeHolder; MachineBlockEntity machine; int parallel=1; long usedEnergy,totalEnergy,currentRecipeMaxEu,lastConsumedEnergy; long lastProbeFingerprint=Long.MIN_VALUE; int retryCooldown; int efficiencyTicks,maxEfficiencyTicks;boolean running,outputsReady;List<ConfigurableItemStack> heldItems=new ArrayList<>();List<ConfigurableFluidStack> heldFluids=new ArrayList<>();State(String id){roomId=id;}boolean hasWork(){return running||outputsReady;} boolean shouldProbe(ThreadIsolationRoom room){return retryCooldown<=0||lastProbeFingerprint!=fingerprint(room);} void markProbe(ThreadIsolationRoom room){lastProbeFingerprint=fingerprint(room);retryCooldown=FAILED_PROBE_RETRY_TICKS;} }
 }

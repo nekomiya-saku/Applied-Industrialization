@@ -40,6 +40,10 @@ public final class RoomInputStorage {
         return this.storage.snapshot();
     }
 
+    public long revision() {
+        return this.storage.revision();
+    }
+
     public long insert(AEKey key, long amount, Actionable mode) {
         return this.storage.insert(key, amount, mode);
     }
