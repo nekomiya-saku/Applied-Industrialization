@@ -84,6 +84,7 @@ public class MEPatternInputHatchBlockEntity
    @Nullable
    private Component customName;
    private final MIInventory bufferInventory;
+   private final AEKeyLongStorage extraInputBuffer = new AEKeyLongStorage(this::setChanged);
    private final MachineComponent persistentData;
    private final ContainerData dataAccess;
    private int tickCount;
@@ -123,6 +124,7 @@ public class MEPatternInputHatchBlockEntity
             MEPatternInputHatchBlockEntity.this.patternLogic.writeToNBT(var1, var2x);
             MEPatternInputHatchBlockEntity.this.upgrades.writeToNBT(var1, "upgrades", var2x);
             MEPatternInputHatchBlockEntity.this.writeRoomStorageNbt(var1, var2x);
+            var1.put("aeindExtraInputBuffer", MEPatternInputHatchBlockEntity.this.extraInputBuffer.writeNbt(var2x));
             var1.putInt("blockingMode", MEPatternInputHatchBlockEntity.this.blockingMode);
             var1.putInt("redstoneMode", MEPatternInputHatchBlockEntity.this.redstoneMode);
             if (MEPatternInputHatchBlockEntity.this.customName != null) {
@@ -136,6 +138,7 @@ public class MEPatternInputHatchBlockEntity
             MEPatternInputHatchBlockEntity.this.patternLogic.readFromNBT(var1, var2x);
             MEPatternInputHatchBlockEntity.this.upgrades.readFromNBT(var1, "upgrades", var2x);
             MEPatternInputHatchBlockEntity.this.readRoomStorageNbt(var1, var2x);
+            MEPatternInputHatchBlockEntity.this.extraInputBuffer.readNbt(var1.getList("aeindExtraInputBuffer", 10), var2x);
             if (var1.contains("blockingMode")) {
                MEPatternInputHatchBlockEntity.this.blockingMode = var1.getInt("blockingMode");
             }
@@ -401,7 +404,8 @@ public class MEPatternInputHatchBlockEntity
          }
       }
 
-      return this.bufferInventory.getFluidStacks().stream().anyMatch(var0 -> !var0.isEmpty());
+      return this.bufferInventory.getFluidStacks().stream().anyMatch(var0 -> !var0.isEmpty())
+         || !this.extraInputBuffer.isEmpty();
    }
 
    public boolean hasStoredMaterials() {
@@ -463,7 +467,7 @@ public class MEPatternInputHatchBlockEntity
 
          return var3;
       } else {
-         return 0L;
+         return this.extraInputBuffer.getAmount(var1);
       }
    }
 
@@ -474,7 +478,9 @@ public class MEPatternInputHatchBlockEntity
       } else if (var1 instanceof AEItemKey var6) {
          return this.insertItems(var6, var2, var4);
       } else {
-         return var1 instanceof AEFluidKey var5 ? this.insertFluid(var5, var2, var4 != Actionable.MODULATE) : 0L;
+         return var1 instanceof AEFluidKey var5
+            ? this.insertFluid(var5, var2, var4 != Actionable.MODULATE)
+            : this.extraInputBuffer.insert(var1, var2, var4);
       }
    }
 
@@ -568,7 +574,7 @@ public class MEPatternInputHatchBlockEntity
                .drain(var14.toStack((int)var15), var4 == Actionable.MODULATE ? IFluidHandler.FluidAction.EXECUTE : IFluidHandler.FluidAction.SIMULATE);
             return var16.getAmount();
          } else {
-            return 0L;
+            return this.extraInputBuffer.extract(var1, var2, var4);
          }
       } else {
          long var6 = 0L;
@@ -628,6 +634,8 @@ public class MEPatternInputHatchBlockEntity
                   }
                }
             }
+
+            var7 |= this.extraInputBuffer.flushTo(var5, var6, var1);
 
             if (var7) {
                this.setChanged();
@@ -702,6 +710,11 @@ public class MEPatternInputHatchBlockEntity
       }
 
       this.addRoomStorageDrops(var1);
+      if (this.level != null) {
+         for (var entry : this.extraInputBuffer.snapshot().entrySet()) {
+            entry.getKey().addDrops(entry.getValue(), var1, this.level, this.getBlockPos());
+         }
+      }
 
       return var1;
    }

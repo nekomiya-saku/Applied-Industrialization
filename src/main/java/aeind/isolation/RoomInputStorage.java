@@ -17,8 +17,10 @@ import java.util.function.Predicate;
 import aztech.modern_industrialization.thirdparty.fabrictransfer.api.fluid.FluidVariant;
 import aztech.modern_industrialization.thirdparty.fabrictransfer.api.item.ItemVariant;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 
 /** Long-count, AE-keyed input storage owned by one isolated recipe room. */
 public final class RoomInputStorage {
@@ -78,6 +80,10 @@ public final class RoomInputStorage {
 
     public void addItemDrops(List<ItemStack> drops) {
         this.storage.addItemDrops(drops);
+    }
+
+    public void addDrops(List<ItemStack> drops, Level level, BlockPos pos) {
+        this.storage.addDrops(drops, level, pos);
     }
 
     public MiInputView createMiView() {
@@ -142,6 +148,9 @@ public final class RoomInputStorage {
 
             Map<AEKey, Long> consumed = new LinkedHashMap<>();
             for (Map.Entry<AEKey, Long> entry : this.sourceAmounts.entrySet()) {
+                if (!(entry.getKey() instanceof AEItemKey) && !(entry.getKey() instanceof AEFluidKey)) {
+                    continue;
+                }
                 long amount = entry.getValue() - remaining.getOrDefault(entry.getKey(), 0L);
                 if (amount > 0L) {
                     consumed.put(entry.getKey(), amount);

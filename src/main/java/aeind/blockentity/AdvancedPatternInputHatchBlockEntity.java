@@ -14,6 +14,7 @@ import appeng.me.helpers.MachineSource;
 import aztech.modern_industrialization.inventory.ConfigurableFluidStack;
 import aztech.modern_industrialization.inventory.ConfigurableItemStack;
 import aeind.block.ModBlocks;
+import aeind.compat.AEKeyTypeSupport;
 import aeind.isolation.IsolatedInputProvider;
 import aeind.isolation.RoomInputStorage;
 import aeind.isolation.ThreadIsolationRoom;
@@ -44,7 +45,7 @@ public class AdvancedPatternInputHatchBlockEntity extends MEPatternInputHatchBlo
          this.roomStorages[room] = new RoomInputStorage(this::setChanged);
       }
       this.catalystStorage = new GenericStackInv(
-         Set.of(AEKeyType.items(), AEKeyType.fluids()), this::setChanged, GenericStackInv.Mode.STORAGE, 18
+         AEKeyTypeSupport.registeredTypes(), this::setChanged, GenericStackInv.Mode.STORAGE, 18
       );
    }
 
@@ -74,10 +75,7 @@ public class AdvancedPatternInputHatchBlockEntity extends MEPatternInputHatchBlo
 
    public long insertBuffer(int var1, AEKey var2, long var3, Actionable var5) {
       if (var1 >= 0 && var1 < 9 && var3 > 0L) {
-         if (var2 instanceof AEItemKey || var2 instanceof AEFluidKey) {
-            return this.roomStorages[var1].insert(var2, var3, var5);
-         }
-         return 0L;
+         return this.roomStorages[var1].insert(var2, var3, var5);
       } else {
          return 0L;
       }
@@ -156,7 +154,9 @@ public class AdvancedPatternInputHatchBlockEntity extends MEPatternInputHatchBlo
    @Override
    protected void addRoomStorageDrops(List<ItemStack> drops) {
       for (RoomInputStorage roomStorage : this.roomStorages) {
-         roomStorage.addItemDrops(drops);
+         if (this.getLevel() != null) {
+            roomStorage.addDrops(drops, this.getLevel(), this.getBlockPos());
+         }
       }
       if (this.getLevel() != null) {
          for (var stack : this.catalystStorage.toList()) {

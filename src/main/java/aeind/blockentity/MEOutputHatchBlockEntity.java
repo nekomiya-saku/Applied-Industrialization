@@ -350,9 +350,18 @@ VirtualOutputSink {
         this.outputBuffer.insert(AEFluidKey.of(key.toStack(1)), amount, Actionable.MODULATE);
     }
 
+    /** Accepts an output already represented by an AE2 key, including optional integration types. */
+    public void acceptGenericOutput(AEKey key, long amount) {
+        if (key != null && amount > 0L) {
+            this.outputBuffer.insert(key, amount, Actionable.MODULATE);
+        }
+    }
+
     public void addOutputDrops(List<ItemStack> list) {
         this.collectMachineOutputs();
-        this.outputBuffer.addItemDrops(list);
+        if (this.level != null) {
+            this.outputBuffer.addDrops(list, this.level, this.getBlockPos());
+        }
         for (ConfigurableItemStack configurableItemStack : this.bufferInventory.getItemStacks()) {
             if (configurableItemStack.isEmpty()) continue;
             ItemVariant itemVariant = (ItemVariant)configurableItemStack.getResource();

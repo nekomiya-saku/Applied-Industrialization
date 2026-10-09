@@ -14,8 +14,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 
 /** A persistent, long-count buffer for outputs waiting to enter the AE network. */
 public final class AEKeyLongStorage {
@@ -208,6 +210,14 @@ public final class AEKeyLongStorage {
                 int count = (int) Math.min(remaining, maxStackSize);
                 drops.add(itemKey.toStack(count));
                 remaining -= count;
+            }
+        }
+    }
+
+    public void addDrops(List<ItemStack> drops, Level level, BlockPos pos) {
+        for (Map.Entry<AEKey, Long> entry : this.contents.entrySet()) {
+            if (entry.getValue() > 0L) {
+                entry.getKey().addDrops(entry.getValue(), drops, level, pos);
             }
         }
     }
