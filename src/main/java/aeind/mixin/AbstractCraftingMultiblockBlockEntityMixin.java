@@ -6,9 +6,8 @@ import aztech.modern_industrialization.machines.components.CrafterComponent;
 import aztech.modern_industrialization.machines.multiblocks.ShapeMatcher;
 import aeind.cross_thread.CrossThreadControllerAccess;
 import aeind.cross_thread.CrossThreadRecipeManager;
+import aeind.cross_thread.CrossThreadTickBridge;
 import aeind.isolation.OverdriveBlocker;
-import aeind.isolation.ThreadIsolationAccess;
-import aeind.isolation.ThreadIsolationRoom;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -31,28 +30,19 @@ public abstract class AbstractCraftingMultiblockBlockEntityMixin implements Cros
       at = @At(value = "INVOKE", target = "Laztech/modern_industrialization/machines/components/CrafterComponent;tickRecipe()Z", remap = false)
    )
    private boolean aeind$tickCrossThreadRecipes(CrafterComponent var1) {
-      if (var1.getInventory() instanceof ThreadIsolationAccess var2) {
-         boolean crossThreadEnabled = var2.aeind$crossThreadEnabled();
-         boolean hasMapStorageRooms = var2.aeind$isolationRooms().stream().anyMatch(ThreadIsolationRoom::hasMapStorage);
-         if (crossThreadEnabled || hasMapStorageRooms) {
-            CrafterComponentAccessor accessor = (CrafterComponentAccessor)var1;
-            if (!this.aeind$crossThreadManager.hasWork() && accessor.aeind$getUsedEnergy() > 0L) {
-               return var1.tickRecipe();
-            }
+      return CrossThreadTickBridge.tickNormal(
+            this.aeind$crossThreadManager,
+            (MachineBlockEntity) (Object) this,
+            var1
+      );
+   }
 
-            if (accessor.aeind$getUsedEnergy() == 0L) {
-               aeind$resetIdleLegacyCrafter(accessor);
-            }
-
-            return this.aeind$crossThreadManager.tick((MachineBlockEntity)(Object)this, var1, var2, crossThreadEnabled);
-         } else {
-            return this.aeind$crossThreadManager.hasWork()
-               ? this.aeind$crossThreadManager.tick((MachineBlockEntity)(Object)this, var1, var2, false)
-               : var1.tickRecipe();
-         }
-      } else {
-         return var1.tickRecipe();
-      }
+   @Redirect(
+      method = "tick",
+      at = @At(value = "INVOKE", target = "Laztech/modern_industrialization/machines/components/CrafterComponent;tryContinueRecipe()Z", remap = false)
+   )
+   private boolean aeind$resumeCrossThreadRecipes(CrafterComponent component) {
+      return CrossThreadTickBridge.resumeNormal(this.aeind$crossThreadManager, component);
    }
 
    @Inject(method = "onRematch", at = @At("TAIL"))
@@ -66,16 +56,5 @@ public abstract class AbstractCraftingMultiblockBlockEntityMixin implements Cros
             }
          }
       }
-   }
-
-   @Unique
-   private static void aeind$resetIdleLegacyCrafter(CrafterComponentAccessor var0) {
-      var0.aeind$setActiveRecipe(null);
-      var0.aeind$setDelayedActiveRecipe(null);
-      var0.aeind$setUsedEnergy(0L);
-      var0.aeind$setRecipeEnergy(0L);
-      var0.aeind$setRecipeMaxEu(0L);
-      var0.aeind$setEfficiencyTicks(0);
-      var0.aeind$setMaxEfficiencyTicks(0);
    }
 }

@@ -16,6 +16,8 @@
         "AbstractModularCrafterComponentAccessor",
         "AbstractCraftingMultiblockBlockEntityMixin",
         "TesseractMultipliedCraftingMultiblockBlockEntityMixin",
+        "TesseractPowerlessMultiblockMachineBlockEntityMixin",
+        "MITweaksTieredCraftingMultiblockBlockEntityMixin",
         "TesseractProgressGuiMixin",
         "CraftingMultiblockProgressGuiMixin",
         "HatchBlockEntityMixin",

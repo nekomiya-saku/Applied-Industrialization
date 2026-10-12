@@ -12,6 +12,7 @@ public final class AeindMixinConfigPlugin implements IMixinConfigPlugin {
    private static final String TESSERACT_MIXIN_PREFIX = "aeind.mixin.Tesseract";
    private static final String TESSERACT_ACCESSOR = "aeind.mixin.MultipliedCrafterComponentAccessor";
    private static final String TESSERACT_MODULAR_ACCESSOR = "aeind.mixin.AbstractModularCrafterComponentAccessor";
+   private static final String MI_TWEAKS_TIERED_MIXIN = "aeind.mixin.MITweaksTieredCraftingMultiblockBlockEntityMixin";
 
    @Override
    public void onLoad(String mixinPackage) {
@@ -26,6 +27,9 @@ public final class AeindMixinConfigPlugin implements IMixinConfigPlugin {
    public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
       if (JADE_MIXIN.equals(mixinClassName)) {
          return LoadingModList.get().getModFileById("jade") != null;
+      }
+      if (MI_TWEAKS_TIERED_MIXIN.equals(mixinClassName)) {
+         return LoadingModList.get().getModFileById("mi_tweaks") != null;
       }
       return (!mixinClassName.startsWith(TESSERACT_MIXIN_PREFIX)
          && !TESSERACT_ACCESSOR.equals(mixinClassName)

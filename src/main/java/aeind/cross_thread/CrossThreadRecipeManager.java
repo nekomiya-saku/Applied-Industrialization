@@ -56,7 +56,8 @@ public final class CrossThreadRecipeManager {
    private int fairnessCursor;
 
    public boolean hasWork() {
-      return this.states.values().stream().anyMatch(CrossThreadRecipeManager.RecipeThreadState::hasWork);
+      return this.states.values().stream().anyMatch(CrossThreadRecipeManager.RecipeThreadState::hasWork)
+         || this.tesseractManager != null && this.tesseractManager.hasWork();
    }
 
    public int getActiveThreadCount() {

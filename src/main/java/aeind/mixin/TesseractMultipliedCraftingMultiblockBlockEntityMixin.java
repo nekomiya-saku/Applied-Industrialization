@@ -2,8 +2,7 @@ package aeind.mixin;
 
 import aeind.cross_thread.CrossThreadControllerAccess;
 import aeind.cross_thread.CrossThreadRecipeManager;
-import aeind.isolation.ThreadIsolationAccess;
-import aeind.isolation.ThreadIsolationRoom;
+import aeind.cross_thread.CrossThreadTickBridge;
 import aztech.modern_industrialization.machines.MachineBlockEntity;
 import net.swedz.tesseract.neoforge.compat.mi.component.craft.multiplied.MultipliedCrafterComponent;
 import net.swedz.tesseract.neoforge.compat.mi.machine.blockentity.multiblock.multiplied.AbstractMultipliedCraftingMultiblockBlockEntity;
@@ -26,25 +25,15 @@ public abstract class TesseractMultipliedCraftingMultiblockBlockEntityMixin impl
 
     @Redirect(method = "tick", at = @At(value = "INVOKE", target = "Lnet/swedz/tesseract/neoforge/compat/mi/component/craft/multiplied/MultipliedCrafterComponent;tickRecipe()Z", remap = false))
     private boolean aeind$tickIsolatedTesseract(MultipliedCrafterComponent component) {
-        if (!((Object)this instanceof MachineBlockEntity machine)) return component.tickRecipe();
-        if (!(component.getInventory() instanceof ThreadIsolationAccess access)) return component.tickRecipe();
-        boolean mapRooms = access.aeind$isolationRooms().stream().anyMatch(ThreadIsolationRoom::hasMapStorage);
-        if (access.aeind$crossThreadEnabled() || mapRooms || aeind$crossThreadManager.hasWork()) {
-            return aeind$crossThreadManager.tickTesseract(machine, component, access, access.aeind$crossThreadEnabled());
-        }
-        return component.tickRecipe();
+        return CrossThreadTickBridge.tickTesseract(
+                aeind$crossThreadManager,
+                (MachineBlockEntity) (Object) this,
+                component
+        );
     }
 
     @Redirect(method = "tick", at = @At(value = "INVOKE", target = "Lnet/swedz/tesseract/neoforge/compat/mi/component/craft/multiplied/MultipliedCrafterComponent;tryContinueRecipe()Z", remap = false))
     private boolean aeind$resumeIsolatedTesseract(MultipliedCrafterComponent component) {
-        if (!((Object)this instanceof MachineBlockEntity)) return component.tryContinueRecipe();
-        if (!(component.getInventory() instanceof ThreadIsolationAccess access)) return component.tryContinueRecipe();
-        boolean mapRooms = access.aeind$isolationRooms().stream().anyMatch(ThreadIsolationRoom::hasMapStorage);
-        if (access.aeind$crossThreadEnabled() || mapRooms || aeind$crossThreadManager.hasWork()) {
-            // The custom manager owns the in-flight recipe after a reload. Tesseract's
-            // native resume state has no corresponding active recipe to restore.
-            return true;
-        }
-        return component.tryContinueRecipe();
+        return CrossThreadTickBridge.resumeTesseract(aeind$crossThreadManager, component);
     }
 }
