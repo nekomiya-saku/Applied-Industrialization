@@ -84,6 +84,42 @@ public final class CrossThreadTickBridge {
         return component.tryContinueRecipe();
     }
 
+    public static boolean tickModernMekChemical(CrossThreadRecipeManager manager, MachineBlockEntity machine, Object component) {
+        Object rawInventory = invoke(component, "getInventory");
+        if (!(rawInventory instanceof ThreadIsolationAccess access)) {
+            return invokeBoolean(component, "tickRecipe");
+        }
+        boolean mapRooms = access.aeind$isolationRooms().stream().anyMatch(ThreadIsolationRoom::hasMapStorage);
+        if (!access.aeind$crossThreadEnabled() && !mapRooms && !manager.hasWork()) {
+            return invokeBoolean(component, "tickRecipe");
+        }
+        return manager.tickModernMekChemical(machine, component, access.aeind$crossThreadEnabled());
+    }
+
+    public static boolean resumeModernMekChemical(CrossThreadRecipeManager manager, Object component) {
+        Object rawInventory = invoke(component, "getInventory");
+        if (!(rawInventory instanceof ThreadIsolationAccess access)) {
+            return invokeBoolean(component, "tryContinueRecipe");
+        }
+        boolean mapRooms = access.aeind$isolationRooms().stream().anyMatch(ThreadIsolationRoom::hasMapStorage);
+        if (access.aeind$crossThreadEnabled() || mapRooms || manager.hasWork()) {
+            return true;
+        }
+        return manager.resumeModernMekChemical(component);
+    }
+
+    private static Object invoke(Object target, String methodName) {
+        try {
+            return target.getClass().getMethod(methodName).invoke(target);
+        } catch (ReflectiveOperationException exception) {
+            throw new IllegalStateException("Failed to call Modern Mekanistics crafter method " + methodName, exception);
+        }
+    }
+
+    private static boolean invokeBoolean(Object target, String methodName) {
+        return Boolean.TRUE.equals(invoke(target, methodName));
+    }
+
     private static void resetIdleLegacyCrafter(CrafterComponentAccessor accessor) {
         accessor.aeind$setActiveRecipe(null);
         accessor.aeind$setDelayedActiveRecipe(null);

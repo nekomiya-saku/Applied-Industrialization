@@ -18,6 +18,7 @@
         "TesseractMultipliedCraftingMultiblockBlockEntityMixin",
         "TesseractPowerlessMultiblockMachineBlockEntityMixin",
         "MITweaksTieredCraftingMultiblockBlockEntityMixin",
+        "ModernMekanisticsChemicalMultiblockMixin",
         "TesseractProgressGuiMixin",
         "CraftingMultiblockProgressGuiMixin",
         "HatchBlockEntityMixin",

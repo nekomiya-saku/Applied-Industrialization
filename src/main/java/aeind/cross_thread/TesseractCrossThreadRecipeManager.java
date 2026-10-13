@@ -59,6 +59,10 @@ public final class TesseractCrossThreadRecipeManager {
 
     public boolean hasWork() { return states.values().stream().anyMatch(State::hasWork); }
 
+    public int activeThreadCount() {
+        return (int) states.values().stream().filter(state -> state.running).count();
+    }
+
     public void readNbt(CompoundTag tag, HolderLookup.Provider lookup, MachineBlockEntity machine,
                         MultipliedCrafterComponent crafter) {
         readNbt(tag, lookup);

@@ -52,16 +52,21 @@ public final class CrossThreadRecipeManager {
    private final Map<String, CrossThreadRecipeManager.RecipeThreadState> states = new LinkedHashMap<>();
    private final Map<String, Integer> reportedParallelByRoom = new LinkedHashMap<>();
    private TesseractCrossThreadRecipeManager tesseractManager;
+   private ModernMekChemicalThreadManager modernMekChemicalManager;
    private long lastEuPerTick;
    private int fairnessCursor;
 
    public boolean hasWork() {
       return this.states.values().stream().anyMatch(CrossThreadRecipeManager.RecipeThreadState::hasWork)
-         || this.tesseractManager != null && this.tesseractManager.hasWork();
+         || this.tesseractManager != null && this.tesseractManager.hasWork()
+         || this.modernMekChemicalManager != null && this.modernMekChemicalManager.hasWork();
    }
 
    public int getActiveThreadCount() {
-      return (int)this.states.values().stream().filter(CrossThreadRecipeManager.RecipeThreadState::isRunning).count();
+      int count = (int)this.states.values().stream().filter(CrossThreadRecipeManager.RecipeThreadState::isRunning).count();
+      if (this.tesseractManager != null) count += this.tesseractManager.activeThreadCount();
+      if (this.modernMekChemicalManager != null) count += this.modernMekChemicalManager.activeThreadCount();
+      return count;
    }
 
    public int getTotalActiveParallel() {
@@ -114,6 +119,10 @@ public final class CrossThreadRecipeManager {
          var1 = new ArrayList<>(var1);
          var1.addAll(this.tesseractManager.progress());
       }
+      if (this.modernMekChemicalManager != null) {
+         var1 = new ArrayList<>(var1);
+         var1.addAll(this.modernMekChemicalManager.progress());
+      }
       return new CrossThreadRecipeManager.ProgressSnapshot(var1);
    }
 
@@ -131,6 +140,17 @@ public final class CrossThreadRecipeManager {
       boolean active = this.tesseractManager.tick(machine, crafter, access, crossThread);
       this.lastEuPerTick = this.tesseractManager.lastEuPerTick();
       return active;
+   }
+
+   public boolean tickModernMekChemical(MachineBlockEntity machine, Object crafter, boolean crossThread) {
+      if (this.modernMekChemicalManager == null) this.modernMekChemicalManager = new ModernMekChemicalThreadManager();
+      boolean active = this.modernMekChemicalManager.tick(machine, crafter, crossThread);
+      this.lastEuPerTick = this.modernMekChemicalManager.lastEuPerTick();
+      return active;
+   }
+
+   public boolean resumeModernMekChemical(Object crafter) {
+      return ModernMekChemicalThreadManager.resumeNative(crafter);
    }
 
    public boolean tick(MachineBlockEntity machine, CrafterComponent crafter, ThreadIsolationAccess access, boolean crossThread) {
@@ -887,6 +907,7 @@ public final class CrossThreadRecipeManager {
          this.tesseractManager.writeNbt(tesseract, var2);
          var1.put("aeindTesseractCrossThreadRecipes", tesseract);
       }
+      if (this.modernMekChemicalManager != null) this.modernMekChemicalManager.writeNbt(var1, var2);
    }
 
    public void readNbt(CompoundTag var1, HolderLookup.Provider var2, MachineBlockEntity machine) {
@@ -936,6 +957,10 @@ public final class CrossThreadRecipeManager {
                   machine, normal, recipe, state.maxEfficiencyTicks, state.efficiencyTicks, state.currentRecipeMaxEu
                );
             }
+         }
+         if (var1.contains("aeindModernMekChemicalThreads", 9) && crafter != null) {
+            this.modernMekChemicalManager = new ModernMekChemicalThreadManager();
+            this.modernMekChemicalManager.readNbt(var1, machine, crafter, var2);
          }
       }
    }
