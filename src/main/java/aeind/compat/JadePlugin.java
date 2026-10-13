@@ -2,8 +2,10 @@ package aeind.compat;
 
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.IInWorldGridNodeHost;
+import appeng.api.stacks.AEKey;
 import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
+import appeng.api.stacks.AmountFormat;
 import appeng.api.stacks.GenericStack;
 import aztech.modern_industrialization.api.machine.holder.MultiblockInventoryComponentHolder;
 import aztech.modern_industrialization.machines.MachineBlock;
@@ -55,6 +57,7 @@ public final class JadePlugin implements IWailaPlugin {
    private static final JadePlugin.CrossThreadStatusProvider CROSS_THREAD_PROVIDER = new JadePlugin.CrossThreadStatusProvider();
    private static final JadePlugin.IsolatedItemStorageProvider INPUT_ITEM_PROVIDER = new JadePlugin.IsolatedItemStorageProvider();
    private static final JadePlugin.IsolatedFluidStorageProvider INPUT_FLUID_PROVIDER = new JadePlugin.IsolatedFluidStorageProvider();
+   private static final JadePlugin.IsolatedChemicalStorageProvider INPUT_CHEMICAL_PROVIDER = new JadePlugin.IsolatedChemicalStorageProvider();
 
    @Override
    public void register(IWailaCommonRegistration var1) {
@@ -62,10 +65,16 @@ public final class JadePlugin implements IWailaPlugin {
       var1.registerBlockDataProvider(PROVIDER, MEOutputHatchBlockEntity.class);
       var1.registerItemStorage(INPUT_ITEM_PROVIDER, AdvancedPatternInputHatchBlockEntity.class);
       var1.registerFluidStorage(INPUT_FLUID_PROVIDER, AdvancedPatternInputHatchBlockEntity.class);
+      if (ModList.get().isLoaded("appmek")) {
+         var1.registerBlockDataProvider(INPUT_CHEMICAL_PROVIDER, AdvancedPatternInputHatchBlockEntity.class);
+      }
       if (ModList.get().isLoaded("extendedae")) {
          var1.registerBlockDataProvider(PROVIDER, ExtendedPatternInputHatchBlockEntity.class);
          var1.registerItemStorage(INPUT_ITEM_PROVIDER, ExtendedPatternInputHatchBlockEntity.class);
          var1.registerFluidStorage(INPUT_FLUID_PROVIDER, ExtendedPatternInputHatchBlockEntity.class);
+         if (ModList.get().isLoaded("appmek")) {
+            var1.registerBlockDataProvider(INPUT_CHEMICAL_PROVIDER, ExtendedPatternInputHatchBlockEntity.class);
+         }
       }
 
       var1.registerBlockDataProvider(CROSS_THREAD_PROVIDER, MachineBlockEntity.class);
@@ -81,6 +90,12 @@ public final class JadePlugin implements IWailaPlugin {
 
       var1.registerItemStorageClient(INPUT_ITEM_PROVIDER);
       var1.registerFluidStorageClient(INPUT_FLUID_PROVIDER);
+      if (ModList.get().isLoaded("appmek")) {
+         var1.registerBlockComponent(INPUT_CHEMICAL_PROVIDER, AdvancedPatternInputHatchBlock.class);
+      }
+      if (ModList.get().isLoaded("extendedae") && ModList.get().isLoaded("appmek")) {
+         var1.registerBlockComponent(INPUT_CHEMICAL_PROVIDER, ExtendedPatternInputHatchBlock.class);
+      }
       var1.registerBlockComponent(CROSS_THREAD_PROVIDER, MachineBlock.class);
    }
 
@@ -114,6 +129,86 @@ public final class JadePlugin implements IWailaPlugin {
 
    private static String formatAmount(long amount) {
       return NumberFormat.getIntegerInstance().format(amount);
+   }
+
+   private static final class IsolatedChemicalStorageProvider implements IBlockComponentProvider, IServerDataProvider<BlockAccessor> {
+      private static final ResourceLocation UID = ResourceLocation.fromNamespaceAndPath("aeind", "isolated_input_chemicals");
+      private static final String CHEMICALS = "aeind_chemical_inputs";
+
+      @Override
+      public ResourceLocation getUid() {
+         return UID;
+      }
+
+      @Override
+      public int getDefaultPriority() {
+         return -1000;
+      }
+
+      @Override
+      public void appendServerData(CompoundTag data, BlockAccessor accessor) {
+         IsolatedInputProvider provider = getIsolatedInputs(accessor);
+         if (provider == null) {
+            return;
+         }
+
+         net.minecraft.nbt.ListTag entries = new net.minecraft.nbt.ListTag();
+         List<ThreadIsolationRoom> rooms = provider.aeind$isolatedInputRooms();
+         for (int roomIndex = 0; roomIndex < rooms.size(); roomIndex++) {
+            ThreadIsolationRoom room = rooms.get(roomIndex);
+            if (!room.hasMapStorage()) {
+               continue;
+            }
+            for (Map.Entry<AEKey, Long> entry : room.inputStorage().snapshot().entrySet()) {
+               if (isChemicalKey(entry.getKey()) && entry.getValue() > 0L) {
+                  addChemicalEntry(entries, Integer.toString(roomIndex + 1), entry.getKey(), entry.getValue());
+               }
+            }
+         }
+
+         CatalystStorageHost catalystHost = getCatalystHost(accessor);
+         if (catalystHost != null) {
+            for (GenericStack stack : catalystHost.aeind$catalystStorage().toList()) {
+               if (stack != null && isChemicalKey(stack.what()) && stack.amount() > 0L) {
+                  addChemicalEntry(entries, "catalysts", stack.what(), stack.amount());
+               }
+            }
+         }
+
+         if (!entries.isEmpty()) {
+            data.put(CHEMICALS, entries);
+         }
+      }
+
+      @Override
+      public void appendTooltip(ITooltip tooltip, BlockAccessor accessor, IPluginConfig config) {
+         net.minecraft.nbt.ListTag entries = accessor.getServerData().getList(CHEMICALS, 10);
+         for (int i = 0; i < entries.size(); i++) {
+            CompoundTag entry = entries.getCompound(i);
+            String group = entry.getString("group");
+            Component location = group.equals("catalysts")
+               ? Component.translatable("jade.aeind.catalysts")
+               : Component.translatable("jade.aeind.input_room", group);
+            tooltip.add(Component.translatable(
+               "jade.aeind.chemical_input",
+               location,
+               entry.getString("name"),
+               entry.getString("amount")
+            ).withStyle(ChatFormatting.GRAY));
+         }
+      }
+
+      private static boolean isChemicalKey(AEKey key) {
+         return key.getType().getId().equals(ResourceLocation.fromNamespaceAndPath("appmek", "chemical"));
+      }
+
+      private static void addChemicalEntry(net.minecraft.nbt.ListTag entries, String group, AEKey key, long amount) {
+         CompoundTag entry = new CompoundTag();
+         entry.putString("group", group);
+         entry.putString("name", key.getDisplayName().getString());
+         entry.putString("amount", key.formatAmount(amount, AmountFormat.FULL));
+         entries.add(entry);
+      }
    }
 
    private static final class IsolatedItemStorageProvider
